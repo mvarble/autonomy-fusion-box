@@ -1,12 +1,18 @@
 name: CI
 
-# Every push is checked. The site is not published anywhere: it is read locally with `pnpm dev`.
+# Every push is checked, and a push that passes publishes the site to GitHub Pages: drafts on a
+# working branch included, so the site shows the latest push.
 on:
     push:
     pull_request:
 
 permissions:
     contents: read
+
+env:
+    # Where GitHub Pages serves the site: under the repository's name, not at the root of a domain.
+    SITE_ORIGIN: https://mvarble.github.io
+    SITE_BASE: /autonomy-fusion-box
 
 jobs:
     workflow:
@@ -62,3 +68,30 @@ jobs:
               run: node_modules/.bin/tsc -p ../tools
             - name: Build the site
               run: pnpm build
+              env:
+                  SITE_URL: ${{ env.SITE_ORIGIN }}
+                  BASE_PATH: ${{ env.SITE_BASE }}
+            - name: Keep the site for publishing
+              if: github.event_name == 'push' && !github.event.repository.private
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: site/build
+
+    pages:
+        name: Publish the site
+        needs: [workflow, site]
+        if: github.event_name == 'push' && !github.event.repository.private
+        runs-on: ubuntu-latest
+        permissions:
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        # One deployment at a time, each to completion, so the last push is the one left standing.
+        concurrency:
+            group: pages
+            cancel-in-progress: false
+        steps:
+            - id: deployment
+              uses: actions/deploy-pages@v4

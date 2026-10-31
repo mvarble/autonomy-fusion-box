@@ -99,4 +99,6 @@ cd site && pnpm check && pnpm lint && pnpm test && pnpm build
 ```
 
 CI (`.github/workflows/ci.yml`) runs the same, and `bin/wf check --merge` on pull requests into
-`main`. It does not publish the site.
+`main`. A push to any branch that passes publishes the site to
+<https://mvarble.github.io/autonomy-fusion-box/>, drafts included, so the site shows the latest
+push.
