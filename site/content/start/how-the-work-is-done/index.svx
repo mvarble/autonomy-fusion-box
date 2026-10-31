@@ -1,0 +1,63 @@
+---
+title: How the work is done
+summary: Every change is an entry that moves through fixed stages, each approved by a person before the next begins.
+order: 2
+---
+
+<script>
+	import ModelGraph from '$lib/components/ModelGraph.svelte';
+	import { workflow } from './workflow.graph';
+</script>
+
+Every change to the box is an **entry** in the [archive](../../archive/), worked on in a branch of
+its own and moved through a fixed series of **stages**. Each stage produces something, and ends only
+when a person approves it. The work of a stage is usually done by a coding agent driven with the
+`/wf-…` commands below, but moving an entry is always the person's to ask for.
+
+## Three kinds of entry
+
+| kind | for | stages |
+| --- | --- | --- |
+| **decision** | a position the project takes, argued in prose | writeup, publish |
+| **milestone** | one of the box's milestones, ending in numbers | plan, build, measure, publish |
+| **chore** | a refactor or tooling change with nothing to measure | plan, build, publish |
+
+## The flow
+
+<ModelGraph spec={workflow} />
+
+## Working through a decision
+
+A decision starts with `/wf-start <slug> decision` and is argued in `writeup.md`. Each question still
+open is a `[!TODO]` callout in the document. The home page lists them under "On the table", and
+`/wf-approve` refuses the stage until none are left.
+
+The site is for reading; the conversation is where a decision moves. Read the entry, then answer with
+`/wf-writeup`, and the document is revised with your answer. When nothing is open, `/wf-approve`
+accepts it, and `/wf-publish` writes the pages that follow from it.
+
+## What the stages guarantee
+
+The stages are kept by a small tool, `bin/wf`, which refuses an edit the current stage does not allow
+and checks the rules on every pull request.
+
+- A branch works on one entry at a time, and merges only once that entry is done or set aside.
+- An approved document is frozen until its stage is reopened, which is recorded with its reason in
+  the entry's history.
+- Code changes only once a plan is approved, and the pages change only at the end.
+- A stage is approved only when its work is committed and complete: no open questions in a document,
+  a checklist in a plan with every box ticked by the end of the build, a `## Results` section in the
+  measurements, and every changed page listed by the entry.
+
+The ledger of [open questions](../../reference/open-questions/) stays open at every stage, so that a
+fact can be recorded the moment it is known.
+
+## Going back
+
+A stage's work sometimes shows an earlier stage wrong: a measurement contradicts the plan, or the
+hardware does not match its datasheet. The work then stops, and `/wf-reopen <stage> <reason>` moves
+the entry back. The reason is recorded, and every stage from there on is approved again. An entry can
+also be set aside with `/wf-abandon <reason>` and taken up again with `/wf-resume <slug>`.
+
+Once its publishing is approved, an entry is done and is never edited again. When the box later
+changes what an entry built, a new entry says so, naming the one it revises.

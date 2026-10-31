@@ -1,0 +1,64 @@
+name: CI
+
+# Every push is checked. The site is not published anywhere: it is read locally with `pnpm dev`.
+on:
+    push:
+    pull_request:
+
+permissions:
+    contents: read
+
+jobs:
+    workflow:
+        name: Workflow rules
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+            - name: Test the tooling
+              run: node --test 'tools/*/*.test.ts'
+            - name: Check the rules against the base branch
+              if: github.event_name == 'pull_request'
+              run: |
+                  flags=""
+                  if [ "${{ github.base_ref }}" = "main" ]; then flags="--merge"; fi
+                  bin/wf check --base "origin/${{ github.base_ref }}" $flags
+            # `main` must have no entry in progress; a working branch may.
+            - name: Check the rules
+              if: github.event_name == 'push'
+              run: |
+                  flags=""
+                  if [ "${{ github.ref }}" = "refs/heads/main" ]; then flags="--merge"; fi
+                  bin/wf check $flags
+
+    site:
+        name: Site
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: site
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  # Documents without dates take them from the git history.
+                  fetch-depth: 0
+            - uses: pnpm/action-setup@v6
+              with:
+                  version: 12
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
+                  cache-dependency-path: site/pnpm-lock.yaml
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm check
+            - run: pnpm lint
+            - run: pnpm test
+            - name: Type-check the tooling
+              run: node_modules/.bin/tsc -p ../tools
+            - name: Build the site
+              run: pnpm build

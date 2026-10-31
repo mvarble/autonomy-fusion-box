@@ -1,0 +1,7 @@
+build
+.svelte-kit
+node_modules
+pnpm-lock.yaml
+# Archive documents are frozen once approved (bin/wf locks them by hash), so no formatter may
+# rewrite them.
+content/archive

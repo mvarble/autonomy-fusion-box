@@ -1,0 +1,14 @@
+# Recordings and captures are data, not source.
+*.mcap
+*.bag
+*.ubx
+/data/
+/captures/
+
+# Build output
+/ros2_ws/build/
+/ros2_ws/install/
+/ros2_ws/log/
+/firmware/*/build/
+__pycache__/
+.venv/
