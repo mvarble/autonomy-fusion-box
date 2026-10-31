@@ -1,5 +1,5 @@
 ---
-summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; the RoboStack build series, the stamp epoch and the repository layout are still open.
+summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; the stamp epoch and the repository layout are still open.
 ---
 
 ## Context
@@ -17,8 +17,9 @@ The facts below come from vendor documents. None has been measured on this hardw
 **Decision:** the Pi runs 64-bit Raspberry Pi OS Trixie. ROS 2 Jazzy comes from
 [RoboStack](https://robostack.github.io/GettingStarted.html), the conda packaging of ROS, installed
 with [Pixi](https://pixi.sh) and pinned by a committed `pixi.lock`. ROS 2 is not installed with apt or
-run in a container. Chrony, the kernel overlays and the process that owns the F9R's port stay on the
-host, outside the Pixi environment, so time sync never depends on ROS.
+run in a container. Chrony and the kernel overlays stay on the host, and time sync must keep working
+without ROS, so the process that owns the F9R's port does not depend on it. Which toolchain builds that
+process is left to M1.
 
 This is two choices, and they differ in what it costs to be wrong. The OS is expensive to change.
 The way ROS 2 reaches it is not: moving from Pixi to a container changes how the workspace is
@@ -58,7 +59,6 @@ channels = ["https://prefix.dev/robostack-jazzy", "conda-forge"]
 platforms = [{ platform = "linux-aarch64", glibc = "2.41" }, { platform = "linux-64", glibc = "2.41" }]
 
 [dependencies]
-ros2-distro-mutex = "0.19.*"
 ros-jazzy-ros-base = "*"
 ros-jazzy-rosbag2-storage-mcap = "*"
 ros-jazzy-rosidl-default-generators = "*"
@@ -72,43 +72,43 @@ ros-jazzy-camera-ros = "*"
 libcamera = { version = "*", build = "*rpi_fork" }
 ```
 
-On arm64 it resolves to `camera_ros` 0.7.0, the `rpi_fork` build of libcamera 0.5.2 and Python 3.12.
-That build contains the PiSP IPA module, tuning files for `imx296` and `imx296_mono`, and libcamera's
-`cam` tool. Three lines of the manifest are there because the solve goes wrong without them, in two
-cases silently:
+On arm64 it resolves to `camera_ros` 0.7.0, the `rpi_fork` build of libcamera 0.5.2 and Python 3.14,
+from RoboStack's newest series (`ros2-distro-mutex` 0.20). That libcamera build contains the PiSP IPA
+module, tuning files for `imx296` and `imx296_mono`, and libcamera's `cam` tool. Two parts of the
+manifest change what gets installed, and leaving either out produces no error:
 
-- **`ros2-distro-mutex`.** RoboStack's newest series on arm64, 0.20, is built for Python 3.14.
-  `ros2-libcamera` there requires libcamera below 0.6, and no such build exists for Python 3.14, so
-  `camera_ros` cannot be installed from that series. A manifest with no pin did not report this: it
-  resolved to `camera_ros` 0.6.0 from the much older series 0.14.
-- **`build = "*rpi_fork"`.** At libcamera 0.5.2 the upstream build number (106) is higher than the
-  fork's (6), so without this line the solver installs upstream libcamera, also without complaint.
-- **`glibc = "2.41"`.** The fork requires glibc 2.34 or later, and the solve fails until the manifest
-  declares it. Debian Trixie ships glibc `2.41-12+deb13u4`.
+- **`glibc = "2.41"`.** libcamera 0.5.2 requires glibc 2.34 or later, and Pixi assumes an older glibc
+  unless told otherwise. Without this declaration the solve still succeeds, but it walks back to
+  `camera_ros` 0.6.0 and libcamera 0.5.1 from the much older series 0.14. Debian Trixie ships glibc
+  `2.41-12+deb13u4`.
+- **`build = "*rpi_fork"`.** The upstream build of libcamera also contains the PiSP pipeline, but at
+  0.5.2 its build number (106) is higher than the fork's (6), so a bare dependency installs upstream.
+  The fork is what `camera_ros` directs a Pi 5 to, and it is the line Raspberry Pi OS follows, so it is
+  the build closest to what the camera's vendor documents.
+
+The lockfile, not the manifest, holds the series, so the box stays on one until it is deliberately
+relocked. libcamera stays at 0.5.x in every series because `ros2-libcamera` requires it below 0.6, so
+moving to libcamera 0.7.1 would mean building `camera_ros` from source. Series 0.19 with Python 3.12
+also solves, and is the first thing to try if Python 3.14 causes trouble: the newest series is built
+for it, though RoboStack's `conda_build_config.yaml` on `main` still listed Python 3.12.
 
 The Pi 5's default kernel, `kernel_2712.img`, uses 16K pages, which has broken binaries built for
 smaller pages. This exposure is not specific to Pixi, because a container shares the host's kernel. The
-evidence so far is good but indirect. Pixi's own arm64 binary failed in exactly this way in 2025, and
-its release builds have set jemalloc's page size since; the current build script still does. All 224
-ELF files in a sample of 18 packages from the environment, including libcamera, `rclcpp`,
+evidence so far is indirect. Pixi's own arm64 binary failed in exactly this way in 2025, the fix set
+jemalloc's page size in its release builds, and a build script on `main` still sets it. All 221 ELF
+files in a sample of 17 of the environment's 495 arm64 packages, including libcamera, `rclcpp`,
 `rmw_fastrtps_cpp`, CycloneDDS, the MCAP storage plugin and OpenCV, have 64K segment alignment, so they
-will load. That does not rule out code that assumes a 4K page at run time. If something does, the
+should load. That does not rule out code that assumes a 4K page at run time. If something does, the
 remedy is `kernel=kernel8.img`, which is a boot-config write and needs its own approval.
-
-> [!TODO] Which RoboStack series does the box pin?
-> Series 0.19 with Python 3.12 and the prebuilt `camera_ros`, as in the manifest above, or series 0.20
-> with Python 3.14, building `camera_ros` from source in `ros2_ws` against libcamera 0.7.1? The second
-> environment solves and has the newer libcamera, but whether `camera_ros` builds against libcamera
-> 0.7 is unverified. **Recommendation:** series 0.19, because it needs no source build. Moving later is
-> a change to the lockfile, which the camera's bring-up in M3 can force if libcamera 0.5.2 fails (#30).
 
 ### What it costs
 
 - **Support.** RoboStack is a community project, and ROS's support tiers do not cover it. A bug that
   reproduces only here is ours to chase, with Docker as the way to find out whether the packaging is
   to blame.
-- **A frozen series.** A pinned series stops receiving fixes, and updating means relocking the whole
-  environment. That is a deliberate change: it gets committed, and the timing measurements get repeated.
+- **A frozen environment.** A locked environment receives no fixes until it is relocked, and relocking
+  can move every package at once. That is a deliberate change: it gets committed, and the timing
+  measurements get repeated.
 - **Two libcameras.** `rpicam-apps` is not on conda-forge, so the vendor's bring-up steps use the
   host's apt libcamera while ROS uses the environment's. A trigger test passing under one says nothing
   about the other, so the camera's measurements run through `cam` or `camera_ros` from the environment.
