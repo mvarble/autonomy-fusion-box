@@ -261,7 +261,7 @@ RoboStack's `robostack-noetic` and `robostack-staging` channels nor conda-forge 
 
 **Decision:** the top level separates what runs on the box from what runs on any development
 machine, and both from the box's physical design. Everything in `box/` is deployed to the Pi or the
-Pico. Everything in `dev/` runs wherever analysis or calibration happens: the development machine,
+Pico. Everything in `tools/` runs wherever analysis or calibration happens: the development machine,
 or the Pi when convenient. Everything in `hardware/` describes the box as an object, and is deployed
 to no computer at all. The repository's own machinery (the site and the workflow's tool) sits beside
 them.
@@ -276,26 +276,27 @@ box/                       # deployed to the Pi and the Pico
     sensor_box_bringup/    # launch files, parameters, and the adopted calibration
   host/ubx_mux/            # owns the F9R USB port; feeds chrony and the driver
   system/                  # host configuration: chrony, systemd units, boot-config fragments
-dev/                       # any development machine
+tools/                     # any development machine
   allan/                   # Allan variance of the IMU
   timing/                  # timing analysis from the AD3 and the logs
   bag_tools/               # bag inspection, and the MCAP-to-ROS 1 export for Kalibr
   calib/                   # target configs, Kalibr runs and their results
   docker/kalibr/           # ROS 1 on Ubuntu 20.04, for Kalibr alone
+  wf/                      # the workflow's tool: not the box's
 hardware/                  # the physical box
   cad/                     # the enclosure and the sensor plate
   wiring/                  # wiring diagram and pin assignments: TIMEPULSE, EXTINT, trigger
   bom.md                   # bill of materials
 site/                      # the companion site
-bin/wf, tools/wf/          # the workflow's tool
+bin/wf                     # the workflow's command line
 pixi.toml                  # the box and dev environments
 pixi.lock                  # committed
 ```
 
-The split carries one rule: **`box/` never depends on `dev/`.** The dependency runs the other way
-only, because analysis reads what the box records. `dev/` reads the message definitions in
+The split carries one rule: **`box/` never depends on `tools/`.** The dependency runs the other way
+only, because analysis reads what the box records. `tools/` reads the message definitions in
 `box/ros2_ws/src/sensor_box_msgs/` to decode bags, and nothing else of the box's. A calibration
-crosses the line as data rather than code: Kalibr's run and its result stay in `dev/calib/`, and the
+crosses the line as data rather than code: Kalibr's run and its result stay in `tools/calib/`, and the
 result the box adopts is copied into `sensor_box_bringup`, named after the run it came from.
 
 `hardware/` is the source of facts about the physical box that software uses. When configuration in
@@ -312,7 +313,7 @@ it sits at the root, with `.pixi/` ignored.
 Four of the directories are not preferences. The stamping rule requires `sensor_box_msgs`, because an
 arrival time cannot be recorded in a stock message. `box/host/ubx_mux` follows from time sync having
 to work without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from
-it. `dev/docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. And the split itself
+it. `tools/docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. And the split itself
 follows from the box and the development machine being different computers, with different
 architectures and different jobs: the line is drawn where deployment happens. `hardware/` stands
 apart because its files are deployed to no computer: they go to a slicer, a fabricator or a soldering
@@ -327,19 +328,22 @@ milestones are pages under `site/content/reference/`. Linting and formatting (`r
 - **Longer paths.** Everything is one level deeper, and the ROS workspace is at `box/ros2_ws`, so
   every colcon command runs from there.
 - **The workflow's code areas change.** `bin/wf` gates the box's code by path, and its list
-  (`firmware/`, `ros2_ws/`, `host/` and the rest, in `tools/wf/lib.ts`) becomes `box/`, `dev/` and
-  `hardware/`.
-  That is a change to the workflow's tool, made when the directories are created.
+  (`firmware/`, `ros2_ws/`, `host/` and the rest, in `tools/wf/lib.ts`) becomes `box/`, `hardware/`,
+  and `tools/` other than `tools/wf/`. That is a change to the workflow's tool, made when the
+  directories are created.
+- **`tools/` holds one stranger.** The workflow's own tool, `tools/wf/`, is not the box's and is not
+  gated, though it sits beside the analysis. The exception is one path, and the workflow already makes
+  it.
 - **Some files straddle.** A script that is used on both the Pi and the development machine, such as a
-  bag inspector, belongs in `dev/`, even when it runs on the Pi. `box/` holds only what the box needs
+  bag inspector, belongs in `tools/`, even when it runs on the Pi. `box/` holds only what the box needs
   in order to record.
 
 ### Alternatives
 
 **A flat layout by kind** (`firmware/`, `ros2_ws/`, `tools/`, `calib/` at the top) groups files by
 language and build system, and is what most ROS repositories do. It lost because it hides the one
-distinction that decides how a file is used: whether it is deployed. Under it, `tools/` and
-`ros2_ws/` would each mix code for the box with code for analysis.
+distinction that decides how a file is used: whether it is deployed. Under it, `ros2_ws/` and
+`calib/` would each mix what the box runs with what analyses it.
 
 **Two repositories** would enforce the dependency rule mechanically, but they would split every
 change that touches both sides, such as a new message field and the analysis that reads it, into two
@@ -394,7 +398,7 @@ The same manifests serve three ways of building, and the box needs all three:
 How the Pi's `box` environment takes the built packages, from a channel copied over or served from
 the development machine, is settled with the first deployment in M1. The build tasks are Pixi tasks in
 the root manifest, which also gains `preview = ["pixi-build"]`. Any deployment script runs on the
-development machine, so it goes in `dev/`.
+development machine, so it goes in `tools/`.
 
 **The Pico's firmware is outside this.** It is always cross-compiled, for a Cortex-M0+ with no
 operating system, and conda-forge has no bare-metal ARM compiler (checked 2026-11-03). It builds with
