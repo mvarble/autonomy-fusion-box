@@ -328,3 +328,9 @@ With these settled, M0 can create the directories, M1's draft plan on the
 epoch.
 
 What each position costs, and what lost and why, is written in its own section.
+
+## Revisions
+
+**2026-11-03.** Reopened because the operating system section said the box would carry two
+libcameras, one from Raspberry Pi OS and one in the Pixi environment, without making clear why, or
+whether the box needs both. This revision works that out and states the position.
