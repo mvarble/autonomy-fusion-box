@@ -1,5 +1,5 @@
 ---
-summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; the stamp epoch and the repository layout are still open.
+summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi, and calibration runs in Basalt with no ROS or container; the stamp epoch and the repository layout are still open.
 ---
 
 ## Context
@@ -114,8 +114,6 @@ remedy is `kernel=kernel8.img`, which is a boot-config write and needs its own a
   about the other, so the camera's measurements run through `cam` or `camera_ros` from the environment.
 - **Activation.** Nothing in the workspace works outside the environment, so every systemd unit that
   runs ROS has to enter it through Pixi. Apt's ROS packages must never be sourced alongside it.
-- **Docker stays for Kalibr.** Kalibr ships only ROS 1 Dockerfiles, so `docker/kalibr` remains, though
-  nothing on the box's recording path runs in a container.
 
 ### Alternatives
 
@@ -153,6 +151,55 @@ and is never hardcoded. Separately, `CFG-TP-TIMEGRID_TP1` is set to GPS either w
 > [!TODO] Which epoch does header.stamp count from?
 > UNIX nanoseconds, as recommended, or continuous GPS time?
 
+## Calibration
+
+**Decision:** camera intrinsics, and the camera-to-IMU transform and time offset, are calibrated
+offline on the development machine with [Basalt](https://gitlab.com/VladyslavUsenko/basalt)'s
+`basalt_calibrate` and `basalt_calibrate_imu`, against an AprilGrid. Calibration needs no ROS
+installation and no container. This belongs with the foundations because it decides whether the
+repository needs a container at all.
+
+The usual tool, Kalibr, reads only ROS 1 bags and ships only ROS 1 Dockerfiles, so using it means
+keeping a ROS 1 environment, in practice a container, for one milestone. Basalt estimates the same
+quantities: camera intrinsics, the camera-to-IMU rotation and translation, the time offset between
+them, and optionally the IMU's scale and axis misalignment
+([calibration docs](https://gitlab.com/VladyslavUsenko/basalt/-/blob/master/doc/Calibration.md)). It
+takes the IMU's noise densities and bias random walks as inputs, defined as Kalibr defines them, so
+M2's Allan variance results feed it directly.
+
+Recordings reach Basalt as ROS 1 bags written by `rosbags`, a Python library that needs no ROS. Basalt
+also reads EuRoC folders, but its EuRoC reader is fixed at two cameras (`data->num_cams = 2` in
+`include/basalt/io/dataset_io_euroc.h`, read on `master` on 2026-11-03), and this box has one. Its bag
+reader is its own, bundled under `thirdparty/ros`. It counts one camera per `sensor_msgs/Image` topic,
+accepts `mono8` and `mono16`, and takes every time from `header.stamp`, never from the bag's record
+time. The stamping rule therefore reaches the calibration unchanged: the exporter copies stamps, and
+does not make them.
+
+Basalt is not on conda-forge, so it sits outside the Pixi environment. Release 0.1.7 (2026-03-21)
+ships an x86-64 Linux binary. Its libraries resolve on the development machine, and it needs glibc
+2.35 where the machine has 2.44, but this was found by inspecting the binary, not by running it (#24).
+The version used is recorded with each calibration in `calib/`.
+
+### What it costs
+
+- **A smaller user base.** Kalibr is the camera-IMU calibrator most work compares against, and Basalt
+  is one research group's codebase. A result that looks wrong has fewer published runs to be checked
+  against, so the first calibration also runs on Basalt's own sample data.
+- **An export step.** Every calibration recording goes through MCAP-to-ROS 1 conversion, so that path
+  has to keep stamps exact and images uncompressed (#25).
+- **The time offset is still not a check.** Like any calibrator's, Basalt's time offset only checks
+  the timing chain if frames are stamped at mid-exposure and the IMU's delay is already measured
+  (#26). Otherwise it is the only measurement of that delay.
+
+### Alternatives
+
+**Kalibr in Docker** is the reference tool, at the cost of a ROS 1 container. It remains the
+cross-check if Basalt's results look wrong.
+
+**Kalibr built from source in a ROS 1 Pixi environment** avoids the container but not ROS 1. Neither
+RoboStack's `robostack-noetic` and `robostack-staging` channels nor conda-forge packaged Kalibr on
+2026-11-03, so it would be a source build of a catkin workspace, for one milestone.
+
 ## Repository layout
 
 The repository holds the box's firmware, its ROS 2 workspace, the host-side services that must run
@@ -169,21 +216,19 @@ host/ubx_mux/            # owns the F9R USB port; feeds chrony and the driver
 tools/
   allan/                 # Allan variance of the IMU
   timing/                # timing analysis from the AD3 and the logs
-  bag_tools/             # bag conversion and inspection
-calib/                   # calibration targets, configs and results
+  bag_tools/             # bag inspection, and the MCAP-to-ROS 1 export for Basalt
+calib/                   # AprilGrid configs, Basalt runs and their results
 system/                  # host configuration: chrony, systemd units, boot-config fragments
 cad/                     # the enclosure
-docker/
-  kalibr/                # ROS 1 on Ubuntu 20.04, for Kalibr alone
 site/                    # the companion site
 pixi.toml                # the ROS 2 environment
 pixi.lock                # committed
 ```
 
-Four of these are not preferences. The stamping rule requires `sensor_box_msgs`, because an arrival
+Three of these are not preferences. The stamping rule requires `sensor_box_msgs`, because an arrival
 time cannot be recorded in a stock message. `host/ubx_mux` follows from time sync having to work
-without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from it.
-`docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. The Pixi files sit at the root
+without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from it. The
+Pixi files sit at the root
 because the manifest is what a build enters from anywhere in the workspace, and `.pixi/` is ignored.
 
 Milestone write-ups live in the archive, as each entry's `measure.md`, and the ledger and the
