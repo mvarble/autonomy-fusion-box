@@ -1,6 +1,6 @@
 {
     "kind": "decision",
-    "stage": "writeup",
+    "stage": "publish",
     "started": "2026-10-31",
     "events": [
         {
@@ -20,14 +20,19 @@
             "stage": "writeup",
             "reason": "The writeup does not make clear why the box would carry two libcameras, or whether it needs to.",
             "commit": "d4aa797"
+        },
+        {
+            "date": "2026-11-03",
+            "action": "approve",
+            "stage": "writeup",
+            "commit": "08f9061"
         }
     ],
     "approvals": {
         "writeup": {
             "date": "2026-11-03",
-            "commit": "523d615",
-            "hash": "c5b6d6fe243955deedf688e3efc89259cb682f928c7a06b1541f754ba9bf90ef",
-            "stale": true
+            "commit": "08f9061",
+            "hash": "3eabff49b922497dee8bc70b3f8ede89aa380cd3ca505996c54c8f3f5a3ca534"
         }
     }
 }
