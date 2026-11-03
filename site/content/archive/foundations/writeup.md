@@ -1,5 +1,5 @@
 ---
-summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; the repository layout is still open.
+summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; and the repository separates what is deployed to the box from what runs on any development machine.
 ---
 
 ## Context
@@ -43,20 +43,26 @@ carries both, and the camera vendor documents its trigger on it.
 Once the OS is Raspberry Pi OS, a container's only job is to supply the ROS userspace, and Pixi supplies
 that with no namespace boundary: no device passthrough, no container networking for DDS, and one less
 layer between a stamp and the hardware. It also removes the libcamera and `camera_ros` source builds,
-and `pixi.lock` records every package by hash. The same manifest serves the development machine, so
-bags can be replayed there with the same ROS packages.
+and `pixi.lock` records every package by hash. The same manifest serves the development machine, and
+the two environments are solved together, so a bag is replayed there with the same ROS packages it
+was recorded with.
 
 ### What was checked
 
 These results come from solving the environment and unpacking its packages on an x86-64 machine, on
-2026-10-30. Nothing has yet run on a Pi, and the [ledger](../../reference/open-questions/) tracks what
-would close that (#29 and #30). This manifest solves for both platforms:
+2026-10-30, and the manifest below was solved again on 2026-11-03. Nothing has yet run on a Pi, and the
+[ledger](../../reference/open-questions/) tracks what would close that (#29 and #30). The manifest has
+one environment for the box, on the Pi alone, and one for development, on either machine; the
+repository's layout below explains the split:
 
 ```toml
 [workspace]
 name = "fusion-box"
 channels = ["https://prefix.dev/robostack-jazzy", "conda-forge"]
-platforms = [{ platform = "linux-aarch64", glibc = "2.41" }, { platform = "linux-64", glibc = "2.41" }]
+platforms = [
+    { name = "pi", platform = "linux-aarch64", glibc = "2.41" },
+    { name = "x86", platform = "linux-64", glibc = "2.41" },
+]
 
 [dependencies]
 ros-jazzy-ros-base = "*"
@@ -67,12 +73,25 @@ cmake = "*"
 ninja = "*"
 colcon-common-extensions = "*"
 
-[target.linux-aarch64.dependencies]
+[feature.box]
+platforms = ["pi"]
+
+[feature.box.dependencies]
 ros-jazzy-camera-ros = "*"
 libcamera = { version = "*", build = "*rpi_fork" }
+
+[feature.dev.dependencies]
+rosbags = "*"
+numpy = "*"
+scipy = "*"
+matplotlib = "*"
+
+[environments]
+box = { features = ["box"], solve-group = "ros" }
+dev = { features = ["dev"], solve-group = "ros" }
 ```
 
-On arm64 it resolves to `camera_ros` 0.7.0, the `rpi_fork` build of libcamera 0.5.2 and Python 3.14,
+In the `box` environment it resolves to `camera_ros` 0.7.0, the `rpi_fork` build of libcamera 0.5.2 and Python 3.14,
 from RoboStack's newest series (`ros2-distro-mutex` 0.20). That libcamera build contains the PiSP IPA
 module, tuning files for `imx296` and `imx296_mono`, and libcamera's `cam` tool. Two parts of the
 manifest change what gets installed, and leaving either out produces no error:
@@ -240,49 +259,83 @@ RoboStack's `robostack-noetic` and `robostack-staging` channels nor conda-forge 
 
 ## Repository layout
 
-The repository holds the box's firmware, its ROS 2 workspace, the host-side services that must run
-without ROS, the analysis tools, and the companion site:
+**Decision:** the top level separates what runs on the box from what runs on any development
+machine. Everything in `box/` is deployed to the Pi, the Pico or the enclosure. Everything in `dev/`
+runs wherever analysis or calibration happens: the development machine, or the Pi when convenient.
+The repository's own machinery (the site and the workflow's tool) sits beside them.
 
 ```text
-firmware/pico-trigger/   # Pico C SDK with PIO: the camera trigger
-ros2_ws/src/
-  sensor_box_msgs/       # messages with the arrival-time field
-  ubx_driver/            # the F9R's UBX stream as ROS messages
-  trigger_bridge/        # matches trigger times to camera frames
-  sensor_box_bringup/    # launch files and parameters
-host/ubx_mux/            # owns the F9R USB port; feeds chrony and the driver
-tools/
-  allan/                 # Allan variance of the IMU
-  timing/                # timing analysis from the AD3 and the logs
-  bag_tools/             # bag inspection, and the MCAP-to-ROS 1 export for Kalibr
-calib/                   # target configs, Kalibr runs and their results
-system/                  # host configuration: chrony, systemd units, boot-config fragments
-cad/                     # the enclosure
-docker/
-  kalibr/                # ROS 1 on Ubuntu 20.04, for Kalibr alone
-site/                    # the companion site
-pixi.toml                # the ROS 2 environment
-pixi.lock                # committed
+box/                       # deployed: what the box is made of
+  firmware/pico-trigger/   # Pico C SDK with PIO: the camera trigger
+  ros2_ws/src/
+    sensor_box_msgs/       # messages with the arrival-time field, and raw GPS week and time of week
+    ubx_driver/            # the F9R's UBX stream as ROS messages
+    trigger_bridge/        # matches trigger times to camera frames
+    sensor_box_bringup/    # launch files, parameters, and the adopted calibration
+  host/ubx_mux/            # owns the F9R USB port; feeds chrony and the driver
+  system/                  # host configuration: chrony, systemd units, boot-config fragments
+  cad/                     # the enclosure and the sensor plate
+dev/                       # any development machine
+  allan/                   # Allan variance of the IMU
+  timing/                  # timing analysis from the AD3 and the logs
+  bag_tools/               # bag inspection, and the MCAP-to-ROS 1 export for Kalibr
+  calib/                   # target configs, Kalibr runs and their results
+  docker/kalibr/           # ROS 1 on Ubuntu 20.04, for Kalibr alone
+site/                      # the companion site
+bin/wf, tools/wf/          # the workflow's tool
+pixi.toml                  # the box and dev environments
+pixi.lock                  # committed
 ```
 
-Four of these are not preferences. The stamping rule requires `sensor_box_msgs`, because an arrival
-time cannot be recorded in a stock message. `host/ubx_mux` follows from time sync having to work
-without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from it.
-`docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. The Pixi files sit at the root
-because the manifest is what a build enters from anywhere in the workspace, and `.pixi/` is ignored.
+The split carries one rule: **`box/` never depends on `dev/`.** The dependency runs the other way
+only, because analysis reads what the box records. `dev/` reads the message definitions in
+`box/ros2_ws/src/sensor_box_msgs/` to decode bags, and nothing else of the box's. A calibration
+crosses the line as data rather than code: Kalibr's run and its result stay in `dev/calib/`, and the
+result the box adopts is copied into `sensor_box_bringup`, named after the run it came from.
+
+The Pixi manifest follows the same line. Its `box` environment exists only for the Pi and carries
+`camera_ros` and the Pi's libcamera. Its `dev` environment exists for both machines and carries the
+analysis libraries. The two share a solve group, so the packages they have in common are the same
+builds: on 2026-11-03, all 485 packages common to both environments on the Pi resolved identically.
+One manifest, rather than one in each directory, is what makes that guarantee possible, which is why
+it sits at the root, with `.pixi/` ignored.
+
+Four of the directories are not preferences. The stamping rule requires `sensor_box_msgs`, because an
+arrival time cannot be recorded in a stock message. `box/host/ubx_mux` follows from time sync having
+to work without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from
+it. `dev/docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. And the split itself
+follows from the box and the development machine being different computers, with different
+architectures and different jobs: the line is drawn where deployment happens.
 
 Milestone write-ups live in the archive, as each entry's `measure.md`, and the ledger and the
 milestones are pages under `site/content/reference/`. Linting and formatting (`ruff`, `clang-format`,
 `pre-commit`) are a chore for after this entry.
 
-**Recommendation:** adopt this layout.
+### What it costs
 
-> [!TODO] Is this the repository layout?
-> Adopt it as written, or say what should change?
+- **Longer paths.** Everything is one level deeper, and the ROS workspace is at `box/ros2_ws`, so
+  every colcon command runs from there.
+- **The workflow's code areas change.** `bin/wf` gates the box's code by path, and its list
+  (`firmware/`, `ros2_ws/`, `host/` and the rest, in `tools/wf/lib.ts`) becomes `box/` and `dev/`.
+  That is a change to the workflow's tool, made when the directories are created.
+- **Some files straddle.** A script that is used on both the Pi and the development machine, such as a
+  bag inspector, belongs in `dev/`, even when it runs on the Pi. `box/` holds only what the box needs
+  in order to record.
+
+### Alternatives
+
+**A flat layout by kind** (`firmware/`, `ros2_ws/`, `tools/`, `calib/` at the top) groups files by
+language and build system, and is what most ROS repositories do. It lost because it hides the one
+distinction that decides how a file is used: whether it is deployed. Under it, `tools/` and
+`ros2_ws/` would each mix code for the box with code for analysis.
+
+**Two repositories** would enforce the dependency rule mechanically, but they would split every
+change that touches both sides, such as a new message field and the analysis that reads it, into two
+commits in two histories.
 
 ## Consequences
 
-Once these are settled, M0 can create the directories, M1's draft plan on the
+With these settled, M0 can create the directories and update the workflow's code areas, M1's draft plan on the
 [milestones page](../../reference/milestones/) can become a real plan, and `AGENTS.md` can state the
 epoch.
 
