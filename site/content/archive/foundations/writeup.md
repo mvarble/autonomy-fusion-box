@@ -1,5 +1,5 @@
 ---
-summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; the repository separates what is deployed to the box, what runs on any development machine, and the box's physical design; and the box's ROS packages are cross-compiled on the development machine with Pixi.
+summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; and the repository separates what is deployed to the box, what runs on any development machine, and the box's physical design.
 ---
 
 ## Context
@@ -348,94 +348,6 @@ distinction that decides how a file is used: whether it is deployed. Under it, `
 **Two repositories** would enforce the dependency rule mechanically, but they would split every
 change that touches both sides, such as a new message field and the analysis that reads it, into two
 commits in two histories.
-
-## Building for the box
-
-**Decision:** the box's ROS packages are cross-compiled for the Pi on the development machine, with
-Pixi's package builds, and the configuration for doing so lives in this repository. Each package in
-`box/ros2_ws/src/` carries a small `pixi.toml` beside its `package.xml`, naming the
-[`pixi-build-ros`](https://pixi.prefix.dev/latest/build/backends/pixi-build-ros/) backend:
-
-```toml
-[package]
-publish = true
-
-[package.build]
-backend = { name = "pixi-build-ros", version = "*" }
-
-[package.build.config]
-distro = "jazzy"
-```
-
-The backend reads the name, version and dependencies from `package.xml`, so the ROS package stays an
-ordinary ROS package, and colcon still builds it. One command at the root then builds every package
-for the Pi:
-
-```sh
-pixi publish --target-platform linux-aarch64 --target-dir <channel>
-```
-
-This was tested on 2026-11-03 with a message package and an `rclcpp` node that uses it. Together they
-built in about 17 s on the development machine, with conda-forge's `gxx_linux-aarch64` cross-compiler. The
-node's executable and the message package's libraries, including its Python type support, are
-arm64. An environment for the Pi then resolved both from the output, indexed as a local channel,
-together with RoboStack's `rclcpp`. Nothing built this way has yet run on a Pi (#32).
-
-This answers the hard part of cross-compiling ROS. A ROS build runs Python code generators, which have
-to run on the build machine while the libraries they produce are for the target. A conda cross-build
-already keeps the two apart, with tools for the build machine in one prefix and libraries for the
-target in another. RoboStack itself builds its arm64 packages natively, on ARM runners, so this
-route has no larger user to lean on. It rests on the test above.
-
-The same manifests serve three ways of building, and the box needs all three:
-
-- **Cross-compiled for the Pi**, the default, on the development machine.
-- **Natively on the Pi**, with the same `pixi publish` and no target platform, when the development
-  machine is not at hand.
-- **With colcon in the `dev` environment**, natively on the development machine, for fast iteration
-  and tests that need no hardware.
-
-How the Pi's `box` environment takes the built packages, from a channel copied over or served from
-the development machine, is settled with the first deployment in M1. The build tasks are Pixi tasks in
-the root manifest, which also gains `preview = ["pixi-build"]`. Any deployment script runs on the
-development machine, so it goes in `tools/`.
-
-**The Pico's firmware is outside this.** It is always cross-compiled, for a Cortex-M0+ with no
-operating system, and conda-forge has no bare-metal ARM compiler (checked 2026-11-03). It builds with
-the system's `arm-none-eabi-gcc` and a pinned Pico SDK, driven by CMake and Ninja from Pixi, and each
-build records the compiler's version beside the firmware it produced.
-
-### What it costs
-
-- **A preview feature.** `pixi-build` is behind a preview flag, and its documentation says it will
-  change until it is stabilized. It already has: Pixi 0.81 deprecates `pixi build` in favour of
-  `pixi publish`.
-- **Builds outside the lockfile.** A package build solves its own build and target environments at
-  build time, so they are not pinned by `pixi.lock`. RoboStack's `ros2-distro-mutex`, which every
-  built package depends on, keeps the ROS libraries on one series. Whether that is enough is part of
-  #32.
-- **The backend's limits.** It ignores version constraints in `package.xml` and does not fully support
-  conditional dependencies. It also finds sibling packages by searching the workspace for
-  `package.xml`, so it fails on a duplicate. An unpacked copy of a built package inside the workspace
-  is enough to cause that, so the build output goes in a directory marked `COLCON_IGNORE`, or outside
-  the repository.
-- **Two toolchains.** The Pico's compiler comes from the system, not from Pixi, so its version is
-  recorded rather than pinned.
-
-### Alternatives
-
-**Building only on the Pi** needs no cross-compiler and nothing in preview. The Pi 5 is fast enough
-for a workspace this size, and it remains the fallback. It lost because each change would mean a trip
-to the Pi before anything can be tried, and because the box would carry compilers and build trees it
-does not need to record.
-
-**A sysroot with a CMake toolchain file**, the usual cross-compiling recipe, would install the Pi's
-environment on the development machine and point colcon at it. ROS's code generators would then
-have to run from the Pi's Python, which cannot run on the development machine without emulation.
-That is the problem a conda cross-build already solves.
-
-**Building in an arm64 container under emulation** avoids cross-compiling, at the cost of builds
-that run much slower and another container.
 
 ## Consequences
 
