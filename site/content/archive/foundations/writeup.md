@@ -25,10 +25,10 @@ This is two choices, and they differ in what it costs to be wrong. The OS is exp
 The way ROS 2 reaches it is not: moving from Pixi to a container changes how the workspace is
 packaged, and leaves its source alone.
 
-The camera's trigger is the riskiest part of the build, so it decides the OS. The kickoff assumed
-Ubuntu 24.04 with native ROS 2, but Ubuntu's two unknowns, the camera trigger and the PPS overlay, both
-sit in the kernel. Neither Pixi nor a container can change the kernel, whereas Raspberry Pi OS carries
-both, and the camera vendor documents its trigger on it.
+The camera's trigger is the riskiest part of the build, so it decides the OS. Ubuntu 24.04 is the
+usual home of ROS 2 Jazzy, but its two unknowns on the Pi 5, the camera trigger and the PPS overlay,
+both sit in the kernel. Neither Pixi nor a container can change the kernel, whereas Raspberry Pi OS
+carries both, and the camera vendor documents its trigger on it.
 
 | Concern | Ubuntu 24.04, native | Pi OS, Docker | Pi OS, Pixi |
 | --- | --- | --- | --- |
@@ -155,40 +155,40 @@ and is never hardcoded. Separately, `CFG-TP-TIMEGRID_TP1` is set to GPS either w
 
 ## Repository layout
 
-The kickoff's suggested layout holds, with these changes:
+The repository holds the box's firmware, its ROS 2 workspace, the host-side services that must run
+without ROS, the analysis tools, and the companion site:
 
 ```text
-firmware/pico-trigger/   # Pico C SDK with PIO
+firmware/pico-trigger/   # Pico C SDK with PIO: the camera trigger
 ros2_ws/src/
-  sensor_box_msgs/       # new: adds the arrival-time field
-  ubx_driver/
-  trigger_bridge/
-  sensor_box_bringup/
-host/ubx_mux/            # new: owns the F9R USB port
+  sensor_box_msgs/       # messages with the arrival-time field
+  ubx_driver/            # the F9R's UBX stream as ROS messages
+  trigger_bridge/        # matches trigger times to camera frames
+  sensor_box_bringup/    # launch files and parameters
+host/ubx_mux/            # owns the F9R USB port; feeds chrony and the driver
 tools/
-  allan/
-  timing/
-  bag_tools/
-calib/
-system/
-cad/
+  allan/                 # Allan variance of the IMU
+  timing/                # timing analysis from the AD3 and the logs
+  bag_tools/             # bag conversion and inspection
+calib/                   # calibration targets, configs and results
+system/                  # host configuration: chrony, systemd units, boot-config fragments
+cad/                     # the enclosure
 docker/
-  kalibr/                # new: ROS 1, Ubuntu 20.04
-site/                    # replaces docs/
-pixi.toml                # new: the ROS 2 environment
-pixi.lock                # new: committed
+  kalibr/                # ROS 1 on Ubuntu 20.04, for Kalibr alone
+site/                    # the companion site
+pixi.toml                # the ROS 2 environment
+pixi.lock                # committed
 ```
 
-Three of these are not preferences. The stamping rule requires `sensor_box_msgs`, because an arrival
+Four of these are not preferences. The stamping rule requires `sensor_box_msgs`, because an arrival
 time cannot be recorded in a stock message. `host/ubx_mux` follows from time sync having to work
-without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from it. And
+without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from it.
 `docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. The Pixi files sit at the root
 because the manifest is what a build enters from anywhere in the workspace, and `.pixi/` is ignored.
 
-The workflow changes one thing about the kickoff: milestone write-ups live in the archive, as each
-entry's `measure.md`, rather than in `docs/`. The ledger and the milestones are pages under
-`site/content/reference/`. M0's linting and formatting setup (`ruff`, `clang-format`, `pre-commit`)
-is a chore for after this entry.
+Milestone write-ups live in the archive, as each entry's `measure.md`, and the ledger and the
+milestones are pages under `site/content/reference/`. Linting and formatting (`ruff`, `clang-format`,
+`pre-commit`) are a chore for after this entry.
 
 **Recommendation:** adopt this layout.
 
@@ -201,5 +201,4 @@ Once these are settled, M0 can create the directories, M1's draft plan on the
 [milestones page](../../reference/milestones/) can become a real plan, and `AGENTS.md` can state the
 epoch rather than leaving it open.
 
-What the OS position costs, and what lost and why, is written in its section. The same is written
-here for the epoch and the layout as those questions are answered.
+What each position costs, and what lost and why, is written in its own section.
