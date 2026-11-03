@@ -7,17 +7,17 @@ order: 1
 Each milestone is opened with `/wf-start <slug> milestone` and ends in measurements. None has been
 started. The camera arrives November 16–29, which sets the earliest date for M4.
 
-|     | Milestone                      | What it must show                                                                                                    |
-| --- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| M0  | Repository scaffolding         | The layout, once the `foundations` entry settles it                                                                  |
-| M1  | Time base                      | chrony locked to PPS; PPS-to-system-clock bias and jitter, measured with the AD3                                     |
-| M2  | UBX logging and Allan variance | `ESF-RAW` and `NAV-PVT` published; noise density and bias random walk from a multi-hour static log, with temperature |
-| M3  | Pico trigger firmware          | PPS-locked triggers with a sequence counter; histogram of edge offsets over hours                                    |
-| M4  | Camera bring-up                | Trigger mode working; trigger-to-exposure latency; PPS-driven LED test; dropped-frame detection                      |
-| M5  | Recorder service               | Bag splitting, button and LED, systemd, read-only root, data partition                                               |
-| M6  | Calibration                    | Camera intrinsics, and camera–IMU extrinsics and time offset in Kalibr                                               |
-| M7  | Power and case                 | Power measurements, sensor plate CAD, flex test, the shell                                                           |
-| M8  | Fusion                         | GTSAM GNSS/IMU with a simulated outage test, then OpenVINS, against PPK ground truth                                 |
+|     | Milestone                      | What it must show                                                                                                                                     |
+| --- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0  | Repository scaffolding         | The directories and the Pixi manifest decided in [`foundations`](../../archive/foundations/writeup.md), and the `box` environment installed on the Pi |
+| M1  | Time base                      | chrony locked to PPS; PPS-to-system-clock bias and jitter, measured with the AD3                                                                      |
+| M2  | UBX logging and Allan variance | `ESF-RAW` and `NAV-PVT` published; noise density and bias random walk from a multi-hour static log, with temperature                                  |
+| M3  | Pico trigger firmware          | PPS-locked triggers with a sequence counter; histogram of edge offsets over hours                                                                     |
+| M4  | Camera bring-up                | Trigger mode working; trigger-to-exposure latency; PPS-driven LED test; dropped-frame detection                                                       |
+| M5  | Recorder service               | Bag splitting, button and LED, systemd, read-only root, data partition                                                                                |
+| M6  | Calibration                    | Camera intrinsics, and camera–IMU extrinsics and time offset in Kalibr                                                                                |
+| M7  | Power and case                 | Power measurements, sensor plate CAD, flex test, the shell                                                                                            |
+| M8  | Fusion                         | GTSAM GNSS/IMU with a simulated outage test, then OpenVINS, against PPK ground truth                                                                  |
 
 ## M1: draft plan
 
@@ -29,6 +29,8 @@ receiver, so the Pi clock serves only latency diagnostics and frame-to-trigger m
 
 ### Preflight, read-only
 
+- Image the Pi with 64-bit Raspberry Pi OS Trixie, and run the image checks in the
+  [ledger](../open-questions/#os-decision-evidence), including the page size (#29).
 - Poll `MON-VER`, and save a `VALGET` snapshot of every layer. The SD logger depends on this receiver,
   so we need a way back.
 - Find TIMEPULSE on the board and check its swing with the AD3 **before** connecting the Pi, outdoors
@@ -55,7 +57,7 @@ Set by name via pyubx2, in RAM and BBR, with read-back.
 | `CFG-TP-PERIOD_TP1` / `PERIOD_LOCK_TP1`                                            | 1000000 µs              |                                                    |
 | `CFG-TP-LEN_TP1` / `LEN_LOCK_TP1`                                                  | 0 / 100000 µs           | No pulse until locked                              |
 | `CFG-RATE-MEAS` / `RATE-NAV` / `RATE-TIMEREF`                                      | 1000 ms / 1 / GPS       | Keep 1 Hz for M1                                   |
-| `CFG-MSGOUT-UBX_TIM_TP_USB`, `NAV_PVT_USB`, `NAV_TIMELS_USB`                       | 1                       |                                                    |
+| `CFG-MSGOUT-UBX_TIM_TP_USB`, `NAV_PVT_USB`, `NAV_TIMEGPS_USB`, `NAV_TIMELS_USB`    | 1                       | The leap-second count and its source (#31)         |
 | `CFG-USBOUTPROT-NMEA`                                                              | 0                       | USB only; the logger's UART is untouched           |
 
 Once M2 raises the rate, `trigger_bridge` must use the last `TIM-TP` before each edge.
@@ -70,9 +72,9 @@ Once M2 raises the rate, `trigger_bridge` must use the last `TIM-TP` before each
 
 ### Coarse time and chrony
 
-A small host process, `host/ubx_mux`, owns the F9R port under either OS. It logs raw UBX, forwards
+A small host process, `host/ubx_mux`, owns the F9R port. It logs raw UBX, forwards
 bytes to the ROS node, and feeds chrony only when `NAV-PVT` shows `validTime` and `fullyResolved`, so
-time sync runs without ROS or a container. The SOCK message format comes from `refclock_sock.c` for
+time sync runs without ROS. The SOCK message format comes from `refclock_sock.c` for
 the installed chrony version.
 
 ```text
