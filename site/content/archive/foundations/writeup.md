@@ -128,9 +128,12 @@ remedy is `kernel=kernel8.img`, which is a boot-config write and needs its own a
 - **A frozen environment.** A locked environment receives no fixes until it is relocked, and relocking
   can move every package at once. That is a deliberate change: it gets committed, and the timing
   measurements get repeated.
-- **Two libcameras.** `rpicam-apps` is not on conda-forge, so the vendor's bring-up steps use the
-  host's apt libcamera while ROS uses the environment's. A trigger test passing under one says nothing
-  about the other, so the camera's measurements run through `cam` or `camera_ros` from the environment.
+- **One libcamera in use.** Raspberry Pi OS ships its own libcamera, which `rpicam-apps` and the
+  camera vendor's instructions use. The box does not use it: all camera work, bring-up included, runs
+  through `cam` and `camera_ros` from the environment, so a measurement is always of the libcamera that
+  records. The host's copy stays only as a diagnostic. If the camera fails under the environment's
+  libcamera, the same test with `rpicam-hello` shows whether the fault lies in the conda-forge build or
+  in the hardware and driver (#30).
 - **Activation.** Nothing in the workspace works outside the environment, so every systemd unit that
   runs ROS has to enter it through Pixi. Apt's ROS packages must never be sourced alongside it.
 
@@ -144,6 +147,12 @@ both kernel unknowns, and the checks in the
 RoboStack packages fail on the Pi. It lost because its costs are certain, in device passthrough, source
 builds of libcamera and `camera_ros`, and another layer to debug, while the risks it avoids can be
 tested directly: the packages as soon as the Pi is imaged, and libcamera when the camera arrives.
+
+**The host's libcamera for ROS** would remove the question in #30, since Raspberry Pi builds it to
+match its kernel. It lost because `camera_ros` in the environment would have to link a library from
+`/usr/lib`, mixing conda and system libraries that may bring different copies of the same
+dependencies, and the clean alternative, a capture process outside ROS handing frames over, adds a
+component to the recording path.
 
 ## The epoch of header.stamp
 
@@ -333,4 +342,6 @@ What each position costs, and what lost and why, is written in its own section.
 
 **2026-11-03.** Reopened because the operating system section said the box would carry two
 libcameras, one from Raspberry Pi OS and one in the Pixi environment, without making clear why, or
-whether the box needs both. This revision works that out and states the position.
+whether the box needs both. It does not. The cost is restated as one libcamera in use, the
+environment's, with the host's kept only as a diagnostic, and using the host's libcamera for ROS is
+added to the alternatives.
