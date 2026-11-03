@@ -1,5 +1,5 @@
 ---
-summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; and the repository keeps the box's code at the top level, with `tools/` for development machines and `hardware/` for the physical design.
+summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; and the repository is laid out flat, by kind.
 ---
 
 ## Context
@@ -259,61 +259,43 @@ RoboStack's `robostack-noetic` and `robostack-staging` channels nor conda-forge 
 
 ## Repository layout
 
-**Decision:** the box's own code sits at the top level, and two directories are set apart from it:
-`tools/`, for what runs on any development machine, and `hardware/`, for the box's physical design.
-Everything else at the top level, other than the repository's own machinery (the site and the
-workflow's command line), is deployed to the Pi or the Pico.
+**Decision:** the repository is laid out flat, by kind: the box's firmware, its ROS 2 workspace, the
+host-side services that must run without ROS, the analysis tools, calibration, system configuration
+and the enclosure each have a directory at the top level, beside the companion site.
 
 ```text
-firmware/pico-trigger/     # Pico C SDK with PIO: the camera trigger
+firmware/pico-trigger/   # Pico C SDK with PIO: the camera trigger
 ros2_ws/src/
-  sensor_box_msgs/         # messages with the arrival-time field, and raw GPS week and time of week
-  ubx_driver/              # the F9R's UBX stream as ROS messages
-  trigger_bridge/          # matches trigger times to camera frames
-  sensor_box_bringup/      # launch files, parameters, and the adopted calibration
-host/ubx_mux/              # owns the F9R USB port; feeds chrony and the driver
-system/                    # host configuration: chrony, systemd units, boot-config fragments
-tools/                     # any development machine
-  allan/                   # Allan variance of the IMU
-  timing/                  # timing analysis from the AD3 and the logs
-  bag_tools/               # bag inspection, and the MCAP-to-ROS 1 export for Kalibr
-  calib/                   # target configs, Kalibr runs and their results
-  docker/kalibr/           # ROS 1 on Ubuntu 20.04, for Kalibr alone
-  wf/                      # the workflow's tool: not the box's
-hardware/                  # the physical box
-  cad/                     # the enclosure and the sensor plate
-  wiring/                  # wiring diagram and pin assignments: TIMEPULSE, EXTINT, trigger
-  bom.md                   # bill of materials
-site/                      # the companion site
-bin/wf                     # the workflow's command line
-pixi.toml                  # the box and dev environments
-pixi.lock                  # committed
+  sensor_box_msgs/       # messages with the arrival-time field, and raw GPS week and time of week
+  ubx_driver/            # the F9R's UBX stream as ROS messages
+  trigger_bridge/        # matches trigger times to camera frames
+  sensor_box_bringup/    # launch files, parameters, and the adopted calibration
+host/ubx_mux/            # owns the F9R USB port; feeds chrony and the driver
+tools/
+  allan/                 # Allan variance of the IMU
+  timing/                # timing analysis from the AD3 and the logs
+  bag_tools/             # bag inspection, and the MCAP-to-ROS 1 export for Kalibr
+  wf/                    # the workflow's tool: not the box's
+calib/                   # target configs, Kalibr runs and their results
+system/                  # host configuration: chrony, systemd units, boot-config fragments
+cad/                     # the enclosure and the sensor plate
+docker/
+  kalibr/                # ROS 1 on Ubuntu 20.04, for Kalibr alone
+site/                    # the companion site
+bin/wf                   # the workflow's command line
+pixi.toml                # the box and dev environments
+pixi.lock                # committed
 ```
 
-The separation carries one rule: **nothing outside `tools/` depends on `tools/`.** The dependency
-runs the other way only, because analysis reads what the box records. `tools/` reads the message
-definitions in `ros2_ws/src/sensor_box_msgs/` to decode bags, and nothing else of the box's. A
-calibration crosses the line as data rather than code: Kalibr's run and its result stay in
-`tools/calib/`, and the result the box adopts is copied into `sensor_box_bringup`, named after the run
-it came from.
+Four of these are not preferences. The stamping rule requires `sensor_box_msgs`, because an arrival
+time cannot be recorded in a stock message. `host/ubx_mux` follows from time sync having to work
+without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from it.
+`docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. The Pixi files sit at the root
+because the manifest is what a build enters from anywhere in the workspace, and `.pixi/` is ignored.
 
-`hardware/` is the source of facts about the physical box that software uses. When the box's
-configuration names a pin, such as the GPIO that takes the PPS in a boot-config fragment, it cites the
-pin assignment in `hardware/wiring/` rather than becoming a second place where that pin is decided.
-
-The Pixi manifest follows the same line. Its `box` environment exists only for the Pi and carries
-`camera_ros` and the Pi's libcamera. Its `dev` environment exists for both machines and carries the
-analysis libraries. The two share a solve group, so the packages they have in common are the same
-builds: on 2026-11-03, all 485 packages common to both environments on the Pi resolved identically.
-One manifest, rather than one in each directory, is what makes that guarantee possible, which is why
-it sits at the root, with `.pixi/` ignored.
-
-Four of the directories are not preferences. The stamping rule requires `sensor_box_msgs`, because an
-arrival time cannot be recorded in a stock message. `host/ubx_mux` follows from time sync having to
-work without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from it.
-`tools/docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. And `tools/` and
-`hardware/` stand apart because neither is deployed to the box: one runs on another computer, and the
-other goes to a slicer, a fabricator or a soldering iron.
+This is the layout `bin/wf` already assumes: its code areas (`firmware/`, `ros2_ws/`, `host/`,
+`system/`, `calib/`, `cad/`, `docker/`, and `tools/` other than `tools/wf/`, in `tools/wf/lib.ts`)
+are exactly these directories, so the workflow's tool needs no change when they are created.
 
 Milestone write-ups live in the archive, as each entry's `measure.md`, and the ledger and the
 milestones are pages under `site/content/reference/`. Linting and formatting (`ruff`, `clang-format`,
@@ -321,32 +303,27 @@ milestones are pages under `site/content/reference/`. Linting and formatting (`r
 
 ### What it costs
 
-- **The separation is a convention.** No directory says "deployed": it is whatever is not in
-  `tools/`, `hardware/` or the repository's machinery. A new top-level directory has to be placed on
-  one side deliberately.
-- **The workflow's code areas change.** `bin/wf` gates the box's code by path (`tools/wf/lib.ts`), and
-  its list gains `hardware/` in place of `cad/`. That is a change to the workflow's tool, made when the
-  directories are created.
+- **Deployment is not visible in the paths.** What goes on the Pi (`ros2_ws/`, `host/`, `system/`)
+  and what runs on a development machine (`tools/`, `calib/`, `docker/`) sit side by side, and the
+  Pixi environments, not the directories, say which is which.
 - **`tools/` holds one stranger.** The workflow's own tool, `tools/wf/`, is not the box's and is not
   gated, though it sits beside the analysis. The exception is one path, and the workflow already makes
   it.
-- **Some files straddle.** A script that is used on both the Pi and the development machine, such as a
-  bag inspector, belongs in `tools/`, even when it runs on the Pi. The rest of the top level holds only
-  what the box needs in order to record.
 
 ### Alternatives
 
-**A `box/` directory** around everything deployed would make the separation explicit in every path,
-at the cost of one more level everywhere, while `tools/` and `hardware/` already mark the two things
-that are not deployed.
+**Separating by where code runs**, with the deployed code in one directory and the development tools
+and the physical design in others, would make deployment visible in every path. It lost because it
+adds a level to every path and a convention to keep, for a distinction that the directory names and
+the Pixi environments already make plain.
 
-**Two repositories** would enforce the dependency rule mechanically, but they would split every
+**Two repositories** would separate the box from its analysis mechanically, but they would split every
 change that touches both sides, such as a new message field and the analysis that reads it, into two
 commits in two histories.
 
 ## Consequences
 
-With these settled, M0 can create the directories and update the workflow's code areas, M1's draft plan on the
+With these settled, M0 can create the directories, M1's draft plan on the
 [milestones page](../../reference/milestones/) can become a real plan, and `AGENTS.md` can state the
 epoch.
 
