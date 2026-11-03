@@ -1,5 +1,5 @@
 ---
-summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; the repository separates what is deployed to the box from what runs on any development machine; and the box's ROS packages are cross-compiled on the development machine with Pixi.
+summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Kalibr, in a ROS 1 container; the repository separates what is deployed to the box, what runs on any development machine, and the box's physical design; and the box's ROS packages are cross-compiled on the development machine with Pixi.
 ---
 
 ## Context
@@ -260,12 +260,14 @@ RoboStack's `robostack-noetic` and `robostack-staging` channels nor conda-forge 
 ## Repository layout
 
 **Decision:** the top level separates what runs on the box from what runs on any development
-machine. Everything in `box/` is deployed to the Pi, the Pico or the enclosure. Everything in `dev/`
-runs wherever analysis or calibration happens: the development machine, or the Pi when convenient.
-The repository's own machinery (the site and the workflow's tool) sits beside them.
+machine, and both from the box's physical design. Everything in `box/` is deployed to the Pi or the
+Pico. Everything in `dev/` runs wherever analysis or calibration happens: the development machine,
+or the Pi when convenient. Everything in `hardware/` describes the box as an object, and is deployed
+to no computer at all. The repository's own machinery (the site and the workflow's tool) sits beside
+them.
 
 ```text
-box/                       # deployed: what the box is made of
+box/                       # deployed to the Pi and the Pico
   firmware/pico-trigger/   # Pico C SDK with PIO: the camera trigger
   ros2_ws/src/
     sensor_box_msgs/       # messages with the arrival-time field, and raw GPS week and time of week
@@ -274,13 +276,16 @@ box/                       # deployed: what the box is made of
     sensor_box_bringup/    # launch files, parameters, and the adopted calibration
   host/ubx_mux/            # owns the F9R USB port; feeds chrony and the driver
   system/                  # host configuration: chrony, systemd units, boot-config fragments
-  cad/                     # the enclosure and the sensor plate
 dev/                       # any development machine
   allan/                   # Allan variance of the IMU
   timing/                  # timing analysis from the AD3 and the logs
   bag_tools/               # bag inspection, and the MCAP-to-ROS 1 export for Kalibr
   calib/                   # target configs, Kalibr runs and their results
   docker/kalibr/           # ROS 1 on Ubuntu 20.04, for Kalibr alone
+hardware/                  # the physical box
+  cad/                     # the enclosure and the sensor plate
+  wiring/                  # wiring diagram and pin assignments: TIMEPULSE, EXTINT, trigger
+  bom.md                   # bill of materials
 site/                      # the companion site
 bin/wf, tools/wf/          # the workflow's tool
 pixi.toml                  # the box and dev environments
@@ -292,6 +297,10 @@ only, because analysis reads what the box records. `dev/` reads the message defi
 `box/ros2_ws/src/sensor_box_msgs/` to decode bags, and nothing else of the box's. A calibration
 crosses the line as data rather than code: Kalibr's run and its result stay in `dev/calib/`, and the
 result the box adopts is copied into `sensor_box_bringup`, named after the run it came from.
+
+`hardware/` is the source of facts about the physical box that software uses. When configuration in
+`box/` names a pin, such as the GPIO that takes the PPS in a boot-config fragment, it cites the pin
+assignment in `hardware/wiring/` rather than becoming a second place where that pin is decided.
 
 The Pixi manifest follows the same line. Its `box` environment exists only for the Pi and carries
 `camera_ros` and the Pi's libcamera. Its `dev` environment exists for both machines and carries the
@@ -305,7 +314,9 @@ arrival time cannot be recorded in a stock message. `box/host/ubx_mux` follows f
 to work without ROS: only one process can own the F9R's USB port, and chrony needs coarse time from
 it. `dev/docker/kalibr` follows from Kalibr shipping only ROS 1 Dockerfiles. And the split itself
 follows from the box and the development machine being different computers, with different
-architectures and different jobs: the line is drawn where deployment happens.
+architectures and different jobs: the line is drawn where deployment happens. `hardware/` stands
+apart because its files are deployed to no computer: they go to a slicer, a fabricator or a soldering
+iron.
 
 Milestone write-ups live in the archive, as each entry's `measure.md`, and the ledger and the
 milestones are pages under `site/content/reference/`. Linting and formatting (`ruff`, `clang-format`,
@@ -316,7 +327,8 @@ milestones are pages under `site/content/reference/`. Linting and formatting (`r
 - **Longer paths.** Everything is one level deeper, and the ROS workspace is at `box/ros2_ws`, so
   every colcon command runs from there.
 - **The workflow's code areas change.** `bin/wf` gates the box's code by path, and its list
-  (`firmware/`, `ros2_ws/`, `host/` and the rest, in `tools/wf/lib.ts`) becomes `box/` and `dev/`.
+  (`firmware/`, `ros2_ws/`, `host/` and the rest, in `tools/wf/lib.ts`) becomes `box/`, `dev/` and
+  `hardware/`.
   That is a change to the workflow's tool, made when the directories are created.
 - **Some files straddle.** A script that is used on both the Pi and the development machine, such as a
   bag inspector, belongs in `dev/`, even when it runs on the Pi. `box/` holds only what the box needs
