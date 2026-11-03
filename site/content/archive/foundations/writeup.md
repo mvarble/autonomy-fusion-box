@@ -1,5 +1,5 @@
 ---
-summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi, and calibration runs in Basalt with no ROS or container; the stamp epoch and the repository layout are still open.
+summary: The Pi runs Raspberry Pi OS Trixie with ROS 2 Jazzy from RoboStack, installed with Pixi; `header.stamp` counts UNIX nanoseconds, GPS time minus leap seconds; calibration runs in Basalt with no ROS or container; the repository layout is still open.
 ---
 
 ## Context
@@ -128,28 +128,63 @@ tested directly: the packages as soon as the Pi is imaged, and libcamera when th
 
 ## The epoch of header.stamp
 
-The stamping rule says "the GPS timebase", which fixes the clock but not the number. GPS time and
-UTC tick together and differ by a whole number of leap seconds, currently 18, so a stamp has to choose
-one to count from. The rule cannot be implemented until it does.
+**Decision:** `header.stamp` counts UNIX nanoseconds, computed from the receiver's GPS time by
+subtracting the leap-second count the receiver reports. The clock is still the GPS timebase, as the
+stamping rule requires; this fixes only the number it is written in.
 
-| | UNIX nanoseconds (GPS time minus leapS) | Continuous GPS time |
-| --- | --- | --- |
-| Compared with the system clock | Directly | Off by leapS, so every latency diagnostic needs a correction |
-| ROS tools, bag log times | Line up | Stamps sit 18 s from everything else |
-| Across a leap second | Steps, in a bag recorded through one | Continuous |
-| Against PPK ground truth | Converted once | Native |
+GPS time and UTC tick together and differ by a whole number of leap seconds: GPS is 18 s ahead of UTC
+since the leap second at the end of 2016 ([USNO](https://www.cnmoc.usff.navy.mil/Our-Commands/United-States-Naval-Observatory/Precise-Time-Department/Global-Positioning-System/USNO-GPS-Time-Transfer/Leap-Seconds/)),
+and IERS Bulletin C 72 announced no leap second for the end of December 2026 ([IERS](https://datacenter.iers.org/data/latestVersion/bulletinC.txt)). UNIX time ignores leap
+seconds, so one helper converts a GPS week, time of week and leap-second count into a stamp:
 
-A leap second would be the one case where UNIX stamps misbehave, and it can be handled: keep raw week
-and time of week in `sensor_box_msgs`, so that continuous GPS time can always be recovered. In the
-other direction, nothing can stop a tool that assumes UNIX time from quietly misreading a GPS stamp.
+$$
+	t_{\mathrm{ns}} = 10^9 \left( 315\,964\,800 + 604\,800\, w - \ell \right) + t_{\mathrm{tow,ns}}
+$$
 
-Whichever is chosen, the conversion happens in one helper only, and leapS comes from `UBX-NAV-TIMELS`
-and is never hardcoded. Separately, `CFG-TP-TIMEGRID_TP1` is set to GPS either way: it defaults to UTC, and on UTC a cold start can wait up to 12.5 minutes for the UTC parameters before the first pulse.
+Here $w$ is the full GPS week, $t_{\mathrm{tow,ns}}$ the time of week in nanoseconds (`iTOW` in
+milliseconds plus `fTOW` in nanoseconds, from `UBX-NAV-TIMEGPS`), $\ell$ the leap-second count, and
+315 964 800 s the GPS epoch, 1980-01-06, in UNIX seconds. Every timestamped source, from the receiver's
+navigation solution to the trigger edges and, once its mapping is known (#10), the IMU's time tags,
+goes through this helper and no other.
 
-**Recommendation:** UNIX nanoseconds, computed as GPS time minus leapS.
+The stamp's value is UNIX time, but its source is never the Pi's system clock. The helper uses the
+receiver's GPS time, and the system clock is used only for the arrival time.
 
-> [!TODO] Which epoch does header.stamp count from?
-> UNIX nanoseconds, as recommended, or continuous GPS time?
+### Where the leap-second count comes from
+
+The count is read from the receiver, never written in the code. `UBX-NAV-TIMEGPS` carries it as
+`leapS` with a `leapSValid` flag, and `UBX-NAV-TIMELS` says where it came from: `srcOfCurrLs = 0`
+means "Default (hardcoded in the firmware, can be outdated)" ([ID §3.15.25–26](../../reference/open-questions/#sources)).
+So a stamp exists only once `leapSValid` is set and the source is a constellation, not the firmware's
+default. Until then the box records nothing, just as it trusts nothing while `UBX-TIM-TP` reports
+`TpNotLocked`. How long that takes after a cold start, and whether the count survives a power cycle
+in battery-backed RAM, are unmeasured (#9, #31).
+
+`CFG-TP-TIMEGRID_TP1` is set to GPS. It defaults to UTC, and on UTC a cold start can wait up to 12.5
+minutes for the UTC parameters before the first pulse. On the GPS grid the pulse marks the same instant
+either way, because the two scales differ by whole seconds.
+
+### What it costs
+
+- **A leap second steps the stamps.** Through a positive leap second, UNIX time repeats a second, so
+  a bag recorded across one has a second of ambiguous stamps. `sensor_box_msgs` therefore keeps each
+  measurement's raw GPS week and time of week beside `header.stamp`, and continuous GPS time can always
+  be recovered. `UBX-NAV-TIMELS` announces a coming leap second, so a recording that would cross one
+  can be flagged in advance.
+- **Ground truth needs one conversion.** PPK solutions are in GPS time, so they pass through the same
+  helper before being compared with the box's estimates.
+- **A wait at a cold start.** Nothing records until the leap-second count is valid.
+
+What this buys is that stamps compare directly with the system clock, so latency diagnostics need no
+correction, and ROS tools, bag times and plotting all agree with the stamps.
+
+### Alternatives
+
+**Continuous GPS time**, counted from the GPS epoch or from 1970 without leap seconds, never steps
+and matches PPK natively. It lost because it puts every stamp 18 s from the system clock and from
+every tool that assumes UNIX time. Nothing marks such a stamp as different, so a tool that assumes
+UNIX time misreads it silently, whereas the leap-second step of UNIX stamps is rare, announced, and
+recoverable from the raw fields.
 
 ## Calibration
 
@@ -244,6 +279,6 @@ milestones are pages under `site/content/reference/`. Linting and formatting (`r
 
 Once these are settled, M0 can create the directories, M1's draft plan on the
 [milestones page](../../reference/milestones/) can become a real plan, and `AGENTS.md` can state the
-epoch rather than leaving it open.
+epoch.
 
 What each position costs, and what lost and why, is written in its own section.
