@@ -5,7 +5,7 @@ order: 2
 ---
 
 Each milestone is opened with `/wf-start <slug> milestone` and ends in measurements. None has been
-started. The camera arrives November 16–29, which sets the earliest date for M4.
+started. All the hardware is in hand.
 
 |     | Milestone                      | What it must show                                                                                                                                     |
 | --- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
