@@ -23,9 +23,10 @@
             <p>
                 An entry is opened for each piece of work and moves through its stages: for a
                 milestone, the plan, the build, the measurements, and last the pages that say what
-                the milestone made true. What each stage approved is kept here as it was approved.
-                When the box later changes, a new entry revises the old one rather than rewriting
-                it.
+                the milestone made true. Between milestones, a probe records one session at the
+                bench: what was done, what was seen, what it taught, and the open questions it
+                closed. What each stage approved is kept here as it was approved. When the box later
+                changes, a new entry revises the old one rather than rewriting it.
             </p>
         </div>
         {#if data.map.nodes.length}

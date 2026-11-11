@@ -13,8 +13,16 @@ its commands), and `authoring.md` beside this file says how to write the documen
 | kind        | stages                                | for                                                 |
 | ----------- | ------------------------------------- | --------------------------------------------------- |
 | `milestone` | `plan` → `build` → `measure` → `publish` | one of the box's milestones, ending in numbers      |
+| `probe`     | `measure` → `publish`                 | one hands-on check of the hardware, closing ledger rows |
 | `decision`  | `writeup` → `publish`                 | a position the project takes, argued in prose       |
 | `chore`     | `plan` → `build` → `publish`          | a refactor or tooling change with nothing to measure |
+
+A milestone is one row of the milestones table (`site/content/reference/milestones/`), never
+more or less. A **probe** is the small step between them: one session at the bench that answers
+questions in the ledger, written up as what was done, what was seen and what it taught, so that the
+archive keeps every step and not only the milestones. A probe writes no box code. It uses
+off-the-shelf tools, and a short script it needs is quoted in full in its `measure.md` so that it
+can be run again. Code worth keeping belongs to a milestone.
 
 Each stage, what it produces, and the skill that works on it:
 

@@ -73,6 +73,7 @@ export const DOCUMENTS = [
 // The stages of each kind of entry, as `tools/wf/lib.ts` defines them.
 export const STAGES: Record<string, string[]> = {
     milestone: ['plan', 'build', 'measure', 'publish'],
+    probe: ['measure', 'publish'],
     decision: ['writeup', 'publish'],
     chore: ['plan', 'build', 'publish'],
 };
@@ -96,6 +97,7 @@ export const STAGE_COMMANDS: Record<string, string> = {
 
 export const KIND_LABELS: Record<string, string> = {
     milestone: 'Milestone',
+    probe: 'Probe',
     decision: 'Decision',
     chore: 'Chore',
 };

@@ -23,7 +23,7 @@ taken to be the parent of the working directory.
 | `content/<track>/<slug>/index.{md,svx}`  | A page: what the box _is_. The folder is its track (`start`, `system`, `reference`), and `order` places it within the track. |
 | `content/math/<slug>/index.{md,svx}`     | A note of mathematics, one idea to a note.                                                                                   |
 | `content/archive/<slug>/index.md`        | An archive entry: one piece of development, opened by `bin/wf start`.                                                        |
-| `content/archive/<slug>/<name>.{md,svx}` | Its documents: `plan`, `measure` (a milestone), `writeup` (a decision). Frozen once approved.                                |
+| `content/archive/<slug>/<name>.{md,svx}` | Its documents: `plan`, `measure` (a milestone or a probe), `writeup` (a decision). Frozen once approved.                     |
 | `content/archive/<slug>/workflow.json`   | Its stage record, written by `bin/wf` alone and shown as the entry's history.                                                |
 | `content/**/*.bib`                       | Bibliography entries, for `[](cite:key)`.                                                                                    |
 | `src/lib/site.ts`                        | Site name, repo URL, the tracks, and the names of an entry's documents. The navigation comes from here.                      |
