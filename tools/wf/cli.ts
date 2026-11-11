@@ -379,7 +379,7 @@ function readiness(
         if (!text.replace(/^---[\s\S]*?\n---/, '').trim()) problems.push(`${doc} is empty.`);
         if (hasTodo(text)) problems.push(`${doc} still has a [!TODO]: open questions remain.`);
         if (stage == 'measure' && !/^#{2,3} Results\b/m.test(text)) {
-            problems.push(`${doc} has no "## Results" section: a milestone ends in measured numbers.`);
+            problems.push(`${doc} has no "## Results" section: measurements end in what was measured.`);
         }
         if (stage == 'plan' && checkboxes(text).total == 0) {
             problems.push(`${doc} has no checklist (\`- [ ] ...\`).`);

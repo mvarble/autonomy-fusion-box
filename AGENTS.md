@@ -50,7 +50,7 @@ none of that needs a workflow, and none of it should start one.
 
 | command                                                  | what it does                                 |
 | -------------------------------------------------------- | -------------------------------------------- |
-| `/wf-start <slug> <milestone\|decision\|chore>`          | open an entry on this branch                 |
+| `/wf-start <slug> <milestone\|probe\|decision\|chore>`   | open an entry on this branch                 |
 | `/wf-writeup`                                            | draft and revise a decision's argument       |
 | `/wf-plan`                                               | draft and revise the plan                    |
 | `/wf-build`                                              | work through the approved plan, task by task |

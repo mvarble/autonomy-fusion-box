@@ -345,3 +345,34 @@ test('frontmatter lists and paths are read as the rules need', () => {
     assert.deepEqual(placeOf('site/content/landing.md'), { area: 'pages' });
     assert.deepEqual(placeOf('site/content/reference/open-questions/index.md'), { area: 'free' });
 });
+
+test('a probe goes straight to its measurements, writes no code, and closes a ledger row', () => {
+    const r = repo();
+    const dir = 'site/content/archive/firmware';
+    const ledger = 'site/content/reference/open-questions/index.md';
+    write(r.root, ledger, '---\ntitle: Open questions\n---\n\n| 1 | Firmware? | OPEN |\n');
+    r.commit();
+    r.sh('branch', '-f', 'main');
+    assert.equal(r.wf('start', 'firmware', '--kind', 'probe', '--title', 'Firmware').code, 0);
+    assert.equal(JSON.parse(read(r.root, `${dir}/workflow.json`)).stage, 'measure');
+    assert.match(r.wf('status').stdout, /\/wf-measure/);
+    const guard = (file: string) =>
+        run(['guard'], { cwd: r.root, stdin: JSON.stringify({ cwd: r.root, tool_input: { file_path: file } }) });
+    assert.equal(guard('host/ubx_mux/main.py').code, 2, 'a probe never opens the code');
+    assert.equal(guard(`${dir}/measure.md`).code, 0);
+    assert.equal(guard(ledger).code, 0);
+    write(r.root, `${dir}/index.md`, '---\ntitle: Firmware\npages: []\n---\n\nWhich firmware.\n');
+    write(r.root, `${dir}/measure.md`, '## What I did\n\nPolled it.\n');
+    r.commit();
+    assert.match(r.wf('approve').stderr, /no "## Results" section/);
+    write(r.root, `${dir}/measure.md`, '## What I did\n\nPolled it.\n\n## Results\n\nHPS 1.40.\n');
+    r.commit();
+    assert.equal(r.wf('approve').code, 0);
+    r.commit();
+    assert.match(r.wf('approve', '--base', 'main').stderr, /no documentation page changed/);
+    write(r.root, ledger, '---\ntitle: Open questions\n---\n\n| 1 | Firmware? | MEASURED |\n');
+    write(r.root, `${dir}/index.md`, '---\ntitle: Firmware\npages: [reference/open-questions]\n---\n\nIt is HPS 1.40.\n');
+    r.commit();
+    const done = r.wf('approve', '--base', 'main');
+    assert.equal(done.code, 0, done.stderr);
+});

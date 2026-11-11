@@ -28,7 +28,7 @@ export const TRACKS: Track[] = [
         id: 'start',
         title: 'Start here',
         short: 'Start',
-        blurb: 'What the box is, and how the work on it is done.',
+        blurb: 'What the box is.',
     },
     {
         id: 'system',
@@ -40,7 +40,7 @@ export const TRACKS: Track[] = [
         id: 'reference',
         title: 'Reference',
         short: 'Reference',
-        blurb: 'The milestones, and the ledger of what is still unverified.',
+        blurb: 'How the work is done, the milestones, and the ledger of what is still unverified.',
     },
 ];
 
@@ -73,6 +73,7 @@ export const DOCUMENTS = [
 // The stages of each kind of entry, as `tools/wf/lib.ts` defines them.
 export const STAGES: Record<string, string[]> = {
     milestone: ['plan', 'build', 'measure', 'publish'],
+    probe: ['measure', 'publish'],
     decision: ['writeup', 'publish'],
     chore: ['plan', 'build', 'publish'],
 };
@@ -96,6 +97,7 @@ export const STAGE_COMMANDS: Record<string, string> = {
 
 export const KIND_LABELS: Record<string, string> = {
     milestone: 'Milestone',
+    probe: 'Probe',
     decision: 'Decision',
     chore: 'Chore',
 };

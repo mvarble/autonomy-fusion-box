@@ -24,7 +24,9 @@ before changing them.
   config with `{path:start..end}` fences, and quoting measured numbers with a link to the entry's
   measurements. A choice a reader would wonder about gets a short `> [!DECISION]` linking the entry
   that made it.
-- **Reference.** The milestones page, where a milestone's status changed.
+- **Reference.** The milestones page, where a milestone's status changed. For a probe, the ledger
+  rows it closed are usually the only page; a probe changes a system page only if what it found
+  corrects one.
 - **Drop what is no longer true.** A page describes only the current box. What it replaced stays in
   the archive.
 - **The entry's `index.md`.** Replace its opening paragraph with what the entry did, for a reader of

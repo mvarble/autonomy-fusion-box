@@ -33,13 +33,16 @@ export const CODE = [
 // ---------------------------------------------------------------------------
 // Kinds and stages
 
-export type Kind = 'milestone' | 'decision' | 'chore';
+export type Kind = 'milestone' | 'probe' | 'decision' | 'chore';
 export type Stage = 'plan' | 'build' | 'measure' | 'publish' | 'writeup';
 export type Terminal = 'done' | 'abandoned';
 
 export const KINDS: Record<Kind, Stage[]> = {
-    // One of the box's milestones: the plan, the work, the numbers it measured, and the pages.
+    // One row of the milestones table: the plan, the work, the numbers it measured, and the pages.
     milestone: ['plan', 'build', 'measure', 'publish'],
+    // One hands-on check of the hardware: what was done, what was seen, what it taught, and the
+    // ledger rows it closes. It writes no box code, so it has no plan or build.
+    probe: ['measure', 'publish'],
     // A position the project takes, argued in prose and then published.
     decision: ['writeup', 'publish'],
     // Work with nothing to measure: a refactor, a tooling change.

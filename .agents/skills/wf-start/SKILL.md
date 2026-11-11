@@ -1,8 +1,8 @@
 ---
 name: wf-start
-description: Open a new entry (a milestone, a decision or a chore) on the current branch of the box's development workflow. Use only when the user invokes /wf-start.
+description: Open a new entry (a milestone, a probe, a decision or a chore) on the current branch of the box's development workflow. Use only when the user invokes /wf-start.
 disable-model-invocation: true
-argument-hint: '<slug> <milestone|decision|chore> [what it is about] [revises <slug>]'
+argument-hint: '<slug> <milestone|probe|decision|chore> [what it is about] [revises <slug>]'
 ---
 
 # /wf-start: open an entry
@@ -11,7 +11,8 @@ argument-hint: '<slug> <milestone|decision|chore> [what it is about] [revises <s
 
 1. Work out the slug (lowercase words joined by hyphens, named after the idea), the kind, a title,
    and any entry it revises from what the user wrote. Ask if the kind is unclear: a **milestone**
-   ends in measured numbers; a **decision** is an argued position; a **chore** is a refactor or a
+   is one row of the milestones table and ends in measured numbers; a **probe** is one hands-on
+   check of the hardware that closes questions in the ledger and writes no box code; a **decision** is an argued position; a **chore** is a refactor or a
    tooling change with nothing to measure.
 2. If the current branch is `main`, make a branch for the entry first (`git switch -c <slug>`),
    unless your environment names the branch to work on.
