@@ -22,8 +22,10 @@ ground truth.
 - A camera frame's time is its mid-exposure, not its trigger edge, and frames are matched to
   triggers by time, never by counting frames alone.
 - Data is not trusted while `UBX-TIM-TP` reports `TpNotLocked`.
-- The epoch of `header.stamp` is an open question in the `foundations` entry. Until it is settled,
-  nothing may assume one.
+- `header.stamp` counts UNIX nanoseconds: the receiver's GPS time minus the leap-second count it
+  reports, converted in one helper and nowhere else. The count is never hardcoded, and is used only
+  once `UBX-NAV-TIMEGPS` sets `leapSValid` and `UBX-NAV-TIMELS` gives a source other than the
+  firmware's default; until then nothing is recorded. Messages keep the raw GPS week and time of week.
 
 ## Unverified facts
 
@@ -46,16 +48,16 @@ none of that needs a workflow, and none of it should start one.
 (`.agents/skills/wf-*`). Every change to the box's code goes through an entry. The procedure is in
 `.agents/reference/workflow.md`. In short:
 
-| command                                                  | what it does                                  |
-| -------------------------------------------------------- | --------------------------------------------- |
-| `/wf-start <slug> <milestone\|decision\|chore>`          | open an entry on this branch                  |
-| `/wf-writeup`                                            | draft and revise a decision's argument        |
-| `/wf-plan`                                               | draft and revise the plan                     |
-| `/wf-build`                                              | work through the approved plan, task by task  |
-| `/wf-measure`                                            | write up the method and the measured results  |
-| `/wf-publish`                                            | bring the pages up to date                    |
-| `/wf-approve`, `/wf-reopen`, `/wf-abandon`, `/wf-resume` | move the entry; the user's alone to give      |
-| `/wf-status`                                             | where things stand                            |
+| command                                                  | what it does                                 |
+| -------------------------------------------------------- | -------------------------------------------- |
+| `/wf-start <slug> <milestone\|decision\|chore>`          | open an entry on this branch                 |
+| `/wf-writeup`                                            | draft and revise a decision's argument       |
+| `/wf-plan`                                               | draft and revise the plan                    |
+| `/wf-build`                                              | work through the approved plan, task by task |
+| `/wf-measure`                                            | write up the method and the measured results |
+| `/wf-publish`                                            | bring the pages up to date                   |
+| `/wf-approve`, `/wf-reopen`, `/wf-abandon`, `/wf-resume` | move the entry; the user's alone to give     |
+| `/wf-status`                                             | where things stand                           |
 
 Rules that hold whether or not a command was invoked:
 
@@ -72,17 +74,20 @@ Rules that hold whether or not a command was invoked:
 
 ## Layout
 
-| path                     | what it is                                                     |
-| ------------------------ | -------------------------------------------------------------- |
-| `site/`                  | the companion site; `site/README.md` says how it works         |
-| `site/content/`          | pages, math notes, the ledger, and the archive of entries      |
-| `bin/wf`, `tools/wf/`    | the workflow's command line and its tests                      |
-| `.workflow/active`       | the entry this branch works on, written by `bin/wf` alone      |
-| `.agents/skills/`        | the skills (linked into `.claude/skills/` for Claude Code)     |
-| `.agents/reference/`     | `workflow.md` (the procedure), `authoring.md` (how to write)   |
+| path                  | what it is                                                   |
+| --------------------- | ------------------------------------------------------------ |
+| `site/`               | the companion site; `site/README.md` says how it works       |
+| `site/content/`       | pages, math notes, the ledger, and the archive of entries    |
+| `bin/wf`, `tools/wf/` | the workflow's command line and its tests                    |
+| `.workflow/active`    | the entry this branch works on, written by `bin/wf` alone    |
+| `.agents/skills/`     | the skills (linked into `.claude/skills/` for Claude Code)   |
+| `.agents/reference/`  | `workflow.md` (the procedure), `authoring.md` (how to write) |
 
-The box's own directories arrive with the `foundations` entry, which settles the repository's
-layout.
+The box's own directories, decided in the `foundations` entry and created in M0, sit flat at the top
+level: `firmware/` (the Pico), `ros2_ws/` (the ROS 2 workspace), `host/` (services that must run
+without ROS, such as `ubx_mux`), `system/` (host configuration), `tools/` (analysis), `calib/`,
+`cad/`, and `docker/` (Kalibr's ROS 1 container). ROS 2 comes from the Pixi manifest at the root, not
+from apt or a container.
 
 ## Commits
 

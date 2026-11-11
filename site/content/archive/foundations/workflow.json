@@ -1,0 +1,49 @@
+{
+    "kind": "decision",
+    "stage": "done",
+    "started": "2026-10-31",
+    "events": [
+        {
+            "date": "2026-10-31",
+            "action": "start",
+            "stage": "writeup"
+        },
+        {
+            "date": "2026-11-03",
+            "action": "approve",
+            "stage": "writeup",
+            "commit": "523d615"
+        },
+        {
+            "date": "2026-11-03",
+            "action": "reopen",
+            "stage": "writeup",
+            "reason": "The writeup does not make clear why the box would carry two libcameras, or whether it needs to.",
+            "commit": "d4aa797"
+        },
+        {
+            "date": "2026-11-03",
+            "action": "approve",
+            "stage": "writeup",
+            "commit": "08f9061"
+        },
+        {
+            "date": "2026-11-11",
+            "action": "approve",
+            "stage": "publish",
+            "commit": "6b7c096"
+        }
+    ],
+    "approvals": {
+        "writeup": {
+            "date": "2026-11-03",
+            "commit": "08f9061",
+            "hash": "3eabff49b922497dee8bc70b3f8ede89aa380cd3ca505996c54c8f3f5a3ca534"
+        },
+        "publish": {
+            "date": "2026-11-11",
+            "commit": "6b7c096"
+        }
+    },
+    "finished": "2026-11-11"
+}

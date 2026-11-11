@@ -18,6 +18,10 @@
     [fill='#ffffff'] {
         fill: var(--bg-1);
     }
+
+    [stroke='#2a6f4d'] {
+        stroke: var(--fg-accent);
+    }
 }
 
 .logo-icon {
