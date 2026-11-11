@@ -1,7 +1,8 @@
 import { defineGraph } from '$lib/graph/spec';
 
 // The stages of an entry and the commands that move it between them. A chore joins a milestone's
-// route at the plan but skips the measurements, and every kind ends in publishing.
+// route at the plan but skips the measurements, a probe joins it at the measurements, and every
+// kind ends in publishing.
 
 export const workflow = defineGraph({
     title: 'The workflow',
@@ -9,7 +10,7 @@ export const workflow = defineGraph({
         '/wf-start opens an entry at the first stage of its kind, and /wf-approve moves it to the ' +
         'next. /wf-reopen takes it back to any earlier stage, of which only the step from the ' +
         'measurements to the plan is drawn. A decision goes from its writeup straight to publishing, ' +
-        'and a chore from its build.',
+        'a chore from its build, and a probe starts at the measurements.',
     width: 900,
     height: 400,
     nodeRadius: 52,
@@ -40,6 +41,7 @@ export const workflow = defineGraph({
     edges: [
         { from: 'start', to: 'writeup' },
         { from: 'start', to: 'plan' },
+        { from: 'start', to: 'measure', via: [[370, 280]], curve: 'bezier' },
         { from: 'plan', to: 'build', kind: 'approve' },
         { from: 'build', to: 'measure', kind: 'approve' },
         { from: 'measure', to: 'publish', kind: 'approve' },

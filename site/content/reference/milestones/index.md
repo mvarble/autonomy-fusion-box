@@ -1,7 +1,7 @@
 ---
 title: Milestones
 summary: The nine milestones from repository scaffolding to fusion, and the draft plan for the first measurement.
-order: 1
+order: 2
 ---
 
 Each milestone is opened with `/wf-start <slug> milestone` and ends in measurements. None has been

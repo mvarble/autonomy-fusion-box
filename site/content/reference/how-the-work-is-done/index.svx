@@ -1,7 +1,7 @@
 ---
 title: How the work is done
 summary: Every change is an entry that moves through fixed stages, each approved by a person before the next begins.
-order: 2
+order: 1
 ---
 
 <script>
@@ -14,12 +14,13 @@ its own and moved through a fixed series of **stages**. Each stage produces some
 when a person approves it. The work of a stage is usually done by a coding agent driven with the
 `/wf-…` commands below, but moving an entry is always the person's to ask for.
 
-## Three kinds of entry
+## Four kinds of entry
 
 | kind | for | stages |
 | --- | --- | --- |
 | **decision** | a position the project takes, argued in prose | writeup, publish |
-| **milestone** | one of the box's milestones, ending in numbers | plan, build, measure, publish |
+| **milestone** | one row of the [milestones](../milestones/), ending in numbers | plan, build, measure, publish |
+| **probe** | one hands-on check of the hardware, closing open questions | measure, publish |
 | **chore** | a refactor or tooling change with nothing to measure | plan, build, publish |
 
 ## The flow
@@ -35,6 +36,14 @@ open is a `[!TODO]` callout in the document. The home page lists them under "On 
 The site is for reading; the conversation is where a decision moves. Read the entry, then answer with
 `/wf-writeup`, and the document is revised with your answer. When nothing is open, `/wf-approve`
 accepts it, and `/wf-publish` writes the pages that follow from it.
+
+## Working through a probe
+
+A probe is one session at the bench between milestones, opened with `/wf-start <slug> probe`. Its
+`measure.md` says what was set out to check, what was done, what was seen, and what it taught, and
+it marks the [open questions](../open-questions/) it answers as measured. A probe writes no code
+for the box: it uses off-the-shelf tools, and quotes any short script in full so it can be run
+again. The archive then keeps every step of learning the hardware, not only the milestones.
 
 ## What the stages guarantee
 

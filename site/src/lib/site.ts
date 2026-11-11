@@ -28,7 +28,7 @@ export const TRACKS: Track[] = [
         id: 'start',
         title: 'Start here',
         short: 'Start',
-        blurb: 'What the box is, and how the work on it is done.',
+        blurb: 'What the box is.',
     },
     {
         id: 'system',
@@ -40,7 +40,7 @@ export const TRACKS: Track[] = [
         id: 'reference',
         title: 'Reference',
         short: 'Reference',
-        blurb: 'The milestones, and the ledger of what is still unverified.',
+        blurb: 'How the work is done, the milestones, and the ledger of what is still unverified.',
     },
 ];
 

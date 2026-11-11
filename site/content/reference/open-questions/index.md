@@ -1,7 +1,7 @@
 ---
 title: Open questions
 summary: The ledger of every unverified fact the box depends on, and how each will be closed.
-order: 2
+order: 3
 ---
 
 Everything here is unverified until the **Status** column says otherwise. A datasheet
