@@ -7,13 +7,14 @@ import { defineGraph } from '$lib/graph/spec';
 export const workflow = defineGraph({
     title: 'The workflow',
     caption:
-        '/wf-start opens an entry at the first stage of its kind, and /wf-approve moves it to the ' +
-        'next. /wf-reopen takes it back to any earlier stage, of which only the step from the ' +
+        '/wf-start opens an entry at the first stage of its kind, each edge out of Start marked with ' +
+        'the kinds that begin there. Each stage names the command that does its work, and /wf-approve ' +
+        'moves the entry to the next. /wf-reopen takes it back to any earlier stage, of which only the step from the ' +
         'measurements to the plan is drawn. A decision goes from its writeup straight to publishing, ' +
         'a chore from its build, and a probe starts at the measurements.',
-    width: 1040,
+    width: 1070,
     height: 400,
-    nodeRadius: 52,
+    nodeRadius: 58,
     fontSize: 15,
     nodeKinds: {
         endpoint: { name: 'Opening and finishing an entry', hue: 'gray' },
@@ -32,21 +33,33 @@ export const workflow = defineGraph({
     },
     nodes: [
         { id: 'start', x: 50, y: 230, r: 34, kind: 'endpoint', label: 'Start' },
-        { id: 'writeup', x: 230, y: 345, kind: 'document', label: 'Writeup' },
-        { id: 'plan', x: 230, y: 150, kind: 'document', label: 'Plan' },
-        { id: 'build', x: 430, y: 150, kind: 'code', label: 'Build' },
-        { id: 'measure', x: 630, y: 150, kind: 'document', label: 'Measure' },
-        { id: 'publish', x: 830, y: 230, kind: 'pages', label: 'Publish' },
-        { id: 'done', x: 990, y: 230, r: 34, kind: 'endpoint', label: 'Done' },
+        {
+            id: 'writeup',
+            x: 230,
+            y: 345,
+            kind: 'document',
+            label: 'Writeup\n$\\texttt{/wf-writeup}$',
+        },
+        { id: 'plan', x: 230, y: 150, kind: 'document', label: 'Plan\n$\\texttt{/wf-plan}$' },
+        { id: 'build', x: 430, y: 150, kind: 'code', label: 'Build\n$\\texttt{/wf-build}$' },
+        {
+            id: 'measure',
+            x: 630,
+            y: 150,
+            kind: 'document',
+            label: 'Measure\n$\\texttt{/wf-measure}$',
+        },
+        { id: 'publish', x: 830, y: 230, kind: 'pages', label: 'Publish\n$\\texttt{/wf-publish}$' },
+        { id: 'done', x: 1020, y: 230, r: 34, kind: 'endpoint', label: 'Done' },
     ],
     edges: [
-        { from: 'start', to: 'writeup', kind: 'start', label: '/wf-start' },
-        { from: 'start', to: 'plan', kind: 'start', label: '/wf-start' },
+        { from: 'start', to: 'writeup', kind: 'start', label: 'decision' },
+        { from: 'start', to: 'plan', kind: 'start', label: 'milestone, chore' },
         {
             from: 'start',
             to: 'measure',
             kind: 'start',
-            label: '/wf-start',
+            label: 'probe',
             via: [[430, 280]],
             curve: 'bezier',
         },
