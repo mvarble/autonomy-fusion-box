@@ -4,9 +4,9 @@ summary: The ledger of every unverified fact the box depends on, and how each wi
 order: 3
 ---
 
-Everything here is unverified until the **Status** column says otherwise. A datasheet
-can close a question about what a part is specified to do. Only a measurement can close
-a question about what this hardware does.
+Everything here is unverified until the **Status** column says otherwise.
+A datasheet can close a question about what a part is specified to do.
+Only a measurement can close a question about what this hardware does.
 
 Status values:
 
@@ -19,10 +19,10 @@ Each "How we close it" ends with the size of the job:
 
 - **Quick**: a short probe, one reading.
 - **Write-up**: a fuller probe, with a method worth recording.
-- **Inside M*n***: closed by that milestone's own build or measurements, because it needs the
-  box's code or is one of the milestone's numbers.
+- **Inside M*n***: closed by that milestone's own build or measurements, because it needs the box's code or is one of the milestone's numbers.
 
-Source tags such as `[IM]` are defined in [Sources](#sources). Last reviewed 2026-10-30.
+Source tags such as `[IM]` are defined in [Sources](#sources).
+Last reviewed 2026-10-30.
 No item has been measured yet.
 
 ## Blocking M1
@@ -67,8 +67,7 @@ No item has been measured yet.
 | 23  | Which I2C bus reaches the camera on each Pi 5 CSI port?                      | DOC              | I2C bus 4 is CAM1 and bus 6 is CAM0 `[INNO §4.5.2]`.                                                                                                                                                                                                                                                                           | `i2cdetect`; expect the sensor at `0x1a`. **Quick:** a short probe, one reading.                                                                                                                                                      |
 | 30  | Does the conda-forge `rpi_fork` libcamera work with Trixie's kernel drivers? | OPEN             | The package contains the PiSP IPA module and `imx296_mono` tuning `[CF-LIBCAMERA]`. The solve gives 0.5.2 at RoboStack series 0.20 `[RS-JAZZY]`. The vendor's Pi OS support covers Pi OS's own libcamera, not this build `[INNO-GH]`. Whether the IPA module's signature verifies after Pixi relocates the package is unknown. | `cam -l` from the environment with the camera attached, then a triggered stream through `camera_ros`. If it fails, compare with the host's apt libcamera, then build `camera_ros` from source against libcamera 0.7.1. **Inside M4.** |
 
-The official Raspberry Pi GS camera instructions do **not** apply to this board: 1.8 V
-XTR, the divider, and the Q2/R11 modification are for a different circuit `[RPI-GS]`.
+The official Raspberry Pi GS camera instructions do **not** apply to this board: 1.8 V XTR, the divider, and the Q2/R11 modification are for a different circuit `[RPI-GS]`.
 
 ## Blocking M6
 
@@ -87,10 +86,9 @@ XTR, the divider, and the Q2/R11 modification are for a different circuit `[RPI-
 
 ## OS decision evidence
 
-Raspberry Pi OS is Tier 3 for Jazzy, and the ROS docs suggest either Ubuntu 24.04 directly
-or Ubuntu containers on Pi OS `[ROS-PI]`. RoboStack is a third route, outside those tiers
-`[ROBOSTACK]`, and the one the box takes. The argument is in the
-[foundations writeup](../../archive/foundations/writeup.md).
+Raspberry Pi OS is Tier 3 for Jazzy, and the ROS docs suggest either Ubuntu 24.04 directly or Ubuntu containers on Pi OS `[ROS-PI]`.
+RoboStack is a third route, outside those tiers `[ROBOSTACK]`, and the one the box takes.
+The argument is in the [foundations writeup](../../archive/foundations/writeup.md).
 
 | Concern                      | Ubuntu 24.04 + native ROS 2                                                                                                                  | Pi OS + ROS 2 in Docker                                        | Pi OS + ROS 2 from Pixi                                                                                        |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |

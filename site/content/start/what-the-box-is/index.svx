@@ -9,11 +9,11 @@ order: 1
 	import { box } from './box.graph';
 </script>
 
-The box is a portable, battery-powered recorder for GNSS, IMU and camera data on one GPS-disciplined
-timebase. Later it will also run fusion onboard. It is a personal project for hands-on sensor-fusion
-experience, which is why each milestone has to end in real numbers. Nothing has been built yet, so
-this page describes the intent. Anything it says about the hardware is a claim until the
-[open questions](../../reference/open-questions/) say otherwise.
+The box is a portable, battery-powered recorder for GNSS, IMU and camera data on one GPS-disciplined timebase.
+Later it will also run fusion onboard.
+It is a personal project for hands-on sensor-fusion experience, which is why each milestone has to end in real numbers.
+Nothing has been built yet, so this page describes the intent.
+Anything it says about the hardware is a claim until the [open questions](../../reference/open-questions/) say otherwise.
 
 ## The hardware
 
@@ -31,42 +31,36 @@ this page describes the intent. Anything it says about the hardware is a claim u
 
 <ModelGraph spec={box} />
 
-**Time.** GPS time is the master clock. The F9R's TIMEPULSE at 1 PPS goes to a Pi GPIO, where chrony
-disciplines the system clock, and to the Pico, which generates camera triggers at known GPS times.
-Chrony takes coarse time from `ubx_mux`, the one process that owns the receiver's USB port, so time
-sync works without ROS.
+**Time.** GPS time is the master clock.
+The F9R's TIMEPULSE at 1 PPS goes to a Pi GPIO, where chrony disciplines the system clock, and to the Pico, which generates camera triggers at known GPS times.
+Chrony takes coarse time from `ubx_mux`, the one process that owns the receiver's USB port, so time sync works without ROS.
 
 **The stamping rule.** `header.stamp` is the measurement time on the GPS timebase, set at the source.
-Arrival time at the Pi is recorded separately, for latency diagnostics only. The stamp counts UNIX
-nanoseconds: the receiver's GPS time minus the leap-second count it reports, converted in one helper.
-The count is used only once `UBX-NAV-TIMEGPS` marks it valid and `UBX-NAV-TIMELS` says it came from a
-constellation rather than the firmware's default, so the box records nothing before then. Each
-message also keeps the raw GPS week and time of week, from which continuous GPS time can be recovered
-across a leap second.
+Arrival time at the Pi is recorded separately, for latency diagnostics only.
+The stamp counts UNIX nanoseconds: the receiver's GPS time minus the leap-second count it reports, converted in one helper.
+The count is used only once `UBX-NAV-TIMEGPS` marks it valid and `UBX-NAV-TIMELS` says it came from a constellation rather than the firmware's default, so the box records nothing before then.
+Each message also keeps the raw GPS week and time of week, from which continuous GPS time can be recovered across a leap second.
 
 > [!DECISION] Why UNIX nanoseconds
-> Stamps then compare directly with the system clock and agree with every ROS tool, and the rare leap
-> second is recoverable from the raw fields. See the [foundations writeup](../../archive/foundations/writeup.md).
+> Stamps then compare directly with the system clock and agree with every ROS tool, and the rare leap second is recoverable from the raw fields.
+> See the [foundations writeup](../../archive/foundations/writeup.md).
 
-**Software.** The Pi runs 64-bit Raspberry Pi OS Trixie. ROS 2 Jazzy comes from RoboStack, installed
-with Pixi and pinned by a committed `pixi.lock`; chrony and `ubx_mux` run on the host, outside it.
-The ROS side is a thin UBX driver of our own, so that we control the stamps, `camera_ros` for frames,
-`trigger_bridge` to match frames to their triggers, and MCAP bags split every few minutes. The camera
-runs only through the libcamera in the Pixi environment; the one Raspberry Pi OS ships is kept as a
-diagnostic. Calibration runs offline on a development machine, in Kalibr, in a ROS 1 container.
+**Software.** The Pi runs 64-bit Raspberry Pi OS Trixie.
+ROS 2 Jazzy comes from RoboStack, installed with Pixi and pinned by a committed `pixi.lock`; chrony and `ubx_mux` run on the host, outside it.
+The ROS side is a thin UBX driver of our own, so that we control the stamps, `camera_ros` for frames, `trigger_bridge` to match frames to their triggers, and MCAP bags split every few minutes.
+The camera runs only through the libcamera in the Pixi environment; the one Raspberry Pi OS ships is kept as a diagnostic.
+Calibration runs offline on a development machine, in Kalibr, in a ROS 1 container.
 Onboard fusion comes later: a GTSAM GNSS and IMU factor graph, then mono VIO.
 
 > [!DECISION] Why Raspberry Pi OS, and ROS 2 from Pixi
-> The camera's trigger mode and the PPS overlay both depend on the Pi's kernel, which Raspberry Pi OS
-> carries and the camera's vendor documents. Pixi then supplies ROS 2 without a container between the
-> nodes and the hardware. See the [foundations writeup](../../archive/foundations/writeup.md).
+> The camera's trigger mode and the PPS overlay both depend on the Pi's kernel, which Raspberry Pi OS carries and the camera's vendor documents.
+> Pixi then supplies ROS 2 without a container between the nodes and the hardware.
+> See the [foundations writeup](../../archive/foundations/writeup.md).
 
-**Repository.** The repository is laid out flat: `firmware/`, `ros2_ws/`, `host/`, `system/`,
-`tools/`, `calib/`, `cad/` and `docker/` at the top level, beside the site and the Pixi manifest. The
-directories arrive with M0.
+**Repository.** The repository is laid out flat: `firmware/`, `ros2_ws/`, `host/`, `system/`, `tools/`, `calib/`, `cad/` and `docker/` at the top level, beside the site and the Pixi manifest.
+The directories arrive with M0.
 
-**Power.** One USB-C PD input to the Pi, which powers the F9R and the Pico over USB and the camera
-over CSI.
+**Power.** One USB-C PD input to the Pi, which powers the F9R and the Pico over USB and the camera over CSI.
 
-**Mechanical.** One rigid plate carries the F9R board and the camera, with nothing compliant between
-the IMU and the camera. The Pi and power hardware sit in a shell around it.
+**Mechanical.** One rigid plate carries the F9R board and the camera, with nothing compliant between the IMU and the camera.
+The Pi and power hardware sit in a shell around it.
