@@ -30,7 +30,8 @@ Demonstrated in this probe:
   flash. They checked it through an FTDI USB-serial adapter in picocom, and logged it with a
   SparkFun OpenLog at the matching baud rate.
 - They wired a UART (TX, RX, 5 V, ground) to that logger.
-- They ran and extended a short pyubx2 script against the receiver.
+- They ran and extended a short pyubx2 script against the receiver, recorded UART1 through the FTDI
+  adapter and the OpenLog, and parsed both recordings, reporting the output as screenshots.
 
 New to them, or not yet familiar:
 
