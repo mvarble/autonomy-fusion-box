@@ -107,7 +107,10 @@ Linux. Then I swapped the adapter for a SparkFun OpenLog, which wrote UART1 to a
 	<figcaption>The board as probed. The F9R module is at the lower right, next to the SMA antenna connector and the POWER + GPS USB-C port.</figcaption>
 </figure>
 
-The board sits in a 3D-printed enclosure and is powered over USB. The four coloured wires are left
+The board sits in a 3D-printed enclosure and is powered over USB. The enclosure is a
+[published design for the simpleRTK2B](https://www.thingiverse.com/thing:3551604), found on
+Thingiverse, and the Santa Barbara Public Library printed it for me, for free. A public library's
+makerspace is worth checking before buying a printer for one part. The four coloured wires are left
 over from [the first attempt](#before-this-lab-a-first-attempt-months-ago). They run to the
 SparkFun OpenLog, and they were left in place for this lab.
 
