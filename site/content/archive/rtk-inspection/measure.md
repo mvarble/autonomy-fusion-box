@@ -2,6 +2,10 @@
 summary: The ZED-F9R on the ArduSimple board runs firmware HPS 1.40, protocol version 33.40, read from `UBX-MON-VER` over USB.
 ---
 
+<script>
+	import board from './board.jpg';
+</script>
+
 ## What I set out to check
 
 - [#1](../../reference/open-questions/index.md#blocking-m1): which firmware the F9R runs. Every
@@ -14,6 +18,42 @@ summary: The ZED-F9R on the ArduSimple board runs firmware HPS 1.40, protocol ve
 > narrow this probe to #1 and rewrite the entry's paragraph to match.
 
 ## What I did
+
+**The board.** This is the ArduSimple board in its 3D-printed enclosure, powered over USB. The
+coloured wires are serial connections I set up in u-center 2 a long time ago, when I was trying to
+get GPS, IMU and INS estimates out of the board. They were still in place for this probe.
+
+<figure>
+	<img src={board} alt="The ArduSimple board in a black enclosure, with a red, a blue, a yellow and a green wire soldered or plugged into its headers and leaving through the enclosure wall. The u-blox ZED-F9R module sits at the lower right, beside the SMA antenna connector." width="1444" height="1362" />
+	<figcaption>The board as probed. The F9R module is at the lower right, next to the SMA antenna connector and the POWER + GPS USB-C port.</figcaption>
+</figure>
+
+What the photo shows, read from the silkscreen:
+
+- **The module** is marked `ZED-F9R-01B-00`.
+- **Two USB-C ports.** The one labelled POWER + XBEE is at the upper left and POWER + GPS at the
+  right. The probe used POWER + GPS.
+- **The wires.** Yellow and green go to the bottom header. Green is in the pin labelled `RX1`.
+  Yellow is in the pin beside it, whose label the wire hides. Red goes to the top header, at the pin
+  above `LED7` (`5V IN/OUT`). Blue goes to the end of the XBee socket's lower row, next to a `GND`
+  label. All four leave through the enclosure wall.
+- **J4, a 6-pin JST connector labelled PIXHAWK + POWER**, at the right edge. Its pins read, from 1
+  to 6: `VIN`, `RX1`, `TX1`, `TPS`, `EVT`, `GND`. So UART1, the timepulse and an event input are on
+  one connector.
+- **The bottom header** also carries `RX2`, `TX2`, `GEOFENCE`, `EXTINT`, `TPS`, `GND`, `RST`,
+  `SDA` and `SCL`. There is a separate `TPS` pad labelled `J9` near the top.
+- **A slide switch labelled XBEE TO GPS UART1 / XBEE TO GPS UART2** picks which of the F9R's UARTs
+  the XBee socket reaches. Its position cannot be read reliably from the photo.
+- **A second slide switch** chooses between `IOREF = 3V3, 5V = OUTPUT` and
+  `IOREF & 5V ARE INPUTS`.
+- **The footprint labelled `BAT`** in the middle of the board, a circle with two pads, has nothing
+  fitted.
+- **LEDs:** `POWER` is lit, and so is `NO RTK`, in red. `PVT` is dark, and the photo was taken
+  indoors. `5V IN/OUT`, `IOREF` and one of the `GPS>XBEE` / `XBEE>GPS` pair are lit as well.
+
+> [!TODO]
+> Confirm the wires: is yellow on `TX1`, red on 5 V and blue on ground? And what is on the other end
+> of them, a USB-serial adapter or something else? Which switch position is the XBee switch in?
 
 **First, u-center 2 on Windows.** I polled `UBX-MON-VER` there, and used its answer to check the
 reading below.
@@ -108,9 +148,12 @@ u-center 2 reported the same value in every field.
   any host, which is what M1's config tool will do on every start.
 - **USB and the UART pins are configured separately.** Each port has its own output protocols and
   its own per-message rates, which is why USB showed only NMEA while the UART carries UBX.
-- **The board is not at factory settings.** My earlier configuration survived power cycles, so it
-  sits in BBR or flash. Before the box changes anything, the stored layers should be read back and
-  recorded, so that what the board was set to before the box is known.
+- **The board is not at factory settings.** UBX still comes out of the UART pins from the
+  configuration I made long ago. Settings in RAM are lost when power goes. BBR keeps them only
+  while a backup supply holds, and the `BAT` footprint has nothing fitted. So the configuration is
+  most likely in flash. #9 asks exactly this, and reading the layers back with `VALGET` would
+  answer it. Before the box changes anything, those stored layers should be read back and recorded,
+  so that what the board was set to before the box is known.
 
 > [!TODO]
 > Correct this in your own words: what surprised you, and what you would do differently.
@@ -121,3 +164,8 @@ u-center 2 reported the same value in every field.
   33.40.
 - Opens [#32](../../reference/open-questions/index.md#blocking-m1): every key the box sets has yet to
   be checked against the HPS 1.40 interface description, which is not yet in the ledger's sources.
+- [#2](../../reference/open-questions/index.md#blocking-m1) stays **OPEN**, but the silkscreen
+  answers its first step. `TPS` and `EVT` are on J4, the PIXHAWK + POWER connector, and `TPS` and
+  `EXTINT` are on the bottom header. Probing the pin with the AD3 is still to come.
+- [#14](../../reference/open-questions/index.md#blocking-m2) stays **OPEN**. On this board, UART1
+  is on both J4 and the bottom header, and a switch connects the XBee socket to UART1 or UART2.
