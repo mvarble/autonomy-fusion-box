@@ -25,8 +25,10 @@ Demonstrated, from the story of a first attempt months earlier and from this pro
 - They worked from a product page to the hookup guide, a sibling board's guide, and u-blox's
   integration manual and interface description, and picked out time tagging as something that would
   matter later.
-- They configured UART1 output in u-center 2, checked it through an FTDI USB-serial adapter in
-  picocom, and logged it with a SparkFun OpenLog.
+- They configured UART1 output in u-center 2, by key, and saved the configuration: UBX on and NMEA
+  off on UART1, 115200 baud, `ESF-RAW` on UART1 and NAV2 output, each written to RAM, BBR and
+  flash. They checked it through an FTDI USB-serial adapter in picocom, and logged it with a
+  SparkFun OpenLog at the matching baud rate.
 - They wired a UART (TX, RX, 5 V, ground) to that logger.
 - They ran and extended a short pyubx2 script against the receiver.
 
@@ -36,12 +38,13 @@ New to them, or not yet familiar:
   `/dev/ttyACM*`, or how that differs from a bridge chip on `/dev/ttyUSB*`.
 - **Serial terminals.** They remembered picocom only by its unusual exit key, and asked how it
   relates to serial ports at all.
-- **Per-port configuration.** They expected UBX on USB, having forgotten that their own earlier
-  configuration put it on UART1. They didn't know that each port has its own output protocols and
-  message rates.
+- **Per-port configuration.** They had set it per port themselves, but months later expected UBX
+  on USB. The model, that each port has its own output protocols and message rates, hadn't stuck.
 - **Binary protocol framing.** They had not decoded a UBX frame (sync, class, ID, length,
   checksum) by hand before this probe.
-- **Configuration layers.** RAM, BBR and flash, and what survives a power cycle, were new.
+- **Configuration layers.** They wrote to RAM, BBR and flash in u-center, but what each layer
+  keeps across a power cycle, and that this board has no backup supply for BBR, were new. The box
+  writes RAM and BBR only, so flash writes need their explicit approval.
 - **Records.** They didn't note the dates, durations or antenna state of their old recordings, and
   their first copy of `MON-VER` was retyped, with one character wrong.
 - **Board-level details.** Their notes came from a sibling board's guide, and they hadn't yet
