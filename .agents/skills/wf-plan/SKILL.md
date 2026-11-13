@@ -17,7 +17,9 @@ Run `bin/wf status --expect plan`. If it fails, stop and tell the user what it s
 
 Read `.agents/reference/workflow.md` once per session, the entry's `index.md`, the
 [ledger](../../../site/content/reference/open-questions/index.md), and the milestone's section of
-`site/content/reference/milestones/index.md`.
+`site/content/reference/milestones/index.md`. For a milestone with hardware work, read
+`.agents/reference/learner.md` too, and give a step the user has not done before enough detail to
+do at the bench.
 
 ## Writing
 

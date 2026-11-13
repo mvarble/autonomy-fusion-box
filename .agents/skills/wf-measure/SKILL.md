@@ -2,7 +2,7 @@
 name: wf-measure
 description: Write or revise the measurements of the active milestone or probe, what was measured, how, and what came out, in the box's development workflow. Use only when the user invokes /wf-measure.
 disable-model-invocation: true
-argument-hint: '[results to record, or what to change]'
+argument-hint: "[results to record, or what to change]"
 ---
 
 # /wf-measure: the measurements
@@ -49,6 +49,8 @@ Against the plan's pass marks: what passed, what did not, and what it changes.
 
 A probe is a record of learning the hardware as much as of the answer. The user is new to hardware
 work and reads these later to see what they did and what they learned, so write it for them.
+Read `.agents/reference/learner.md` first, pitch the explanations to it, and before the stage is
+approved add what this probe showed about what they know and what is still new to them.
 
 ```markdown
 ---
