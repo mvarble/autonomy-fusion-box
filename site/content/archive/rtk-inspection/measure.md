@@ -165,8 +165,8 @@ As the labels read, the two positions do this:
 For a 3.3 V adapter, and later for the Pi, the first position is the one to want.
 Confirm it with a meter on the `IOREF` pin before connecting anything.
 
-> [!TODO]
-> Which position is the switch in, and did you measure IOREF?
+On this board the switch is set to `IOREF = 3V3, 5V = OUTPUT`: the UART pins run at 3.3 V, and the board's `5V` pin supplies 5 V.
+That is the pin the OpenLog draws its power from in step 5.
 
 Plugged into the computer, the adapter appears as `/dev/ttyUSB0`.
 It is a bridge chip: on one side it speaks UART, on the other USB, and Linux's `ftdi_sio` driver presents it as a serial port.
