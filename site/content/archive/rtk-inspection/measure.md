@@ -12,23 +12,23 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 	import ioref from './ioref-switch.jpg';
 </script>
 
-I am a mathematician that has found a career as a navigation engineer, not an embedded developer, and this box is how I am learning the
-hardware side, with an AI assistant alongside. The [ledger](../../reference/open-questions/index.md)
-is full of questions about this receiver that the assistant raised, and answering them will mean
-polling messages, reading bytes and wiring pins. Before that, I wanted a feel for the basics with
-my own hands: get data out of the board, into a file, and parsed.
+I trained as a mathematician and work as a navigation engineer.
+Embedded development sits right next to that work, but nothing in my studies touched it.
+This box is how I am learning the hardware side, with an AI assistant alongside.
+The [ledger](../../reference/open-questions/index.md) is full of questions about this receiver that the assistant raised, and answering them will mean polling messages, reading bytes and wiring pins.
+Before that, I wanted a feel for the basics with my own hands: get data out of the board, into a file, and parsed.
 
 This lab does that in five steps, each building on the last:
 
 1. [find the documentation](#1-finding-the-documentation);
-2. [configure UART1 in u-center 2](#2-configuring-uart1-in-u-center-2) to send the messages I care
-   about;
+2. [configure UART1 in u-center 2](#2-configuring-uart1-in-u-center-2) to send the messages I care about;
 3. [check that bytes flow](#3-checking-that-bytes-flow), through an FTDI USB-serial adapter;
 4. [record the bytes to a file and parse it](#4-recording-a-file-and-parsing-it);
 5. [swap in an SD-card logger and parse its file](#5-recording-with-the-openlog).
 
-Each step says what it is for, how it is done, what to look for, and what it taught. It answers no
-ledger question by itself. [What comes next](#what-comes-next) lists the ones it prepares for.
+Each step says what it is for, how it is done, what to look for, and what it taught.
+It answers no ledger question by itself.
+[What comes next](#what-comes-next) lists the ones it prepares for.
 
 ## The setup
 
@@ -37,42 +37,34 @@ ledger question by itself. [What comes next](#what-comes-next) lists the ones it
 	<figcaption>The board, with the OpenLog's wires from step 5. The F9R module is at the lower right, next to the SMA antenna connector and the POWER + GPS USB-C port.</figcaption>
 </figure>
 
-The board is ArduSimple's simpleRTK2B Fusion, which carries a u-blox ZED-F9R: a GNSS receiver
-with an IMU inside. It sits in a 3D-printed enclosure and is powered over USB. The enclosure is a
-design I found online, [on Thingiverse](https://www.thingiverse.com/thing:3551604), and the Santa
-Barbara Public Library printed it for me, for free. A public library is worth asking before buying
-a printer for one part.
+The board is ArduSimple's simpleRTK2B Fusion, which carries a u-blox ZED-F9R: a GNSS receiver with an IMU inside.
+It sits in a 3D-printed enclosure and is powered over USB.
+The enclosure is a design I found online, [on Thingiverse](https://www.thingiverse.com/thing:3551604), and the Santa Barbara Public Library printed it for me, for free.
+A public library is worth asking before buying a printer for one part.
 
 Besides the board, the lab uses:
 
 - **u-center 2**, u-blox's configuration tool, on Windows;
 - **an FTDI USB-serial adapter**, and **picocom**, a minimal serial terminal, on Linux;
-- **a SparkFun OpenLog**, a small board that writes whatever arrives on its serial input to an SD
-  card;
-- **my desktop computer**, running Arch Linux (kernel 7.2.14-arch1-1), with Python 3.15.2,
-  pyubx2 1.4.1 and pyserial 3.5 from the Pixi environment at the repository root.
+- **a SparkFun OpenLog**, a small board that writes whatever arrives on its serial input to an SD card;
+- **my desktop computer**, running Arch Linux (kernel 7.2.14-arch1-1), with Python 3.15.2, pyubx2 1.4.1 and pyserial 3.5 from the Pixi environment at the repository root.
 
 ## 1. Finding the documentation
 
-**What it is for.** Knowing which pin is which, which tool configures the receiver, and where its
-messages are defined. Everything after this step leans on it.
+**What it is for.** Knowing which pin is which, which tool configures the receiver, and where its messages are defined.
+Everything after this step leans on it.
 
 **How it is done.** Start at the product and follow the links down to the chip's maker:
 
-- **The [product page](https://www.ardusimple.com/product/simplertk2b-fusion/)** leads to the
-  board's [hookup guide](https://www.ardusimple.com/rtk-ins-simplertk2b-f9r-hookup-guide/).
-- **The pin details** were not in the hookup guide. They were in the
-  [guide for a sibling board](https://www.ardusimple.com/user-guide-simplertk2b-budget/), the
-  simpleRTK2B Budget, which carries a ZED-F9P rather than the F9R. Its section on the
-  [Arduino rails](https://www.ardusimple.com/user-guide-simplertk2b-budget/#arduino) shows which
-  header pins carry which UART. That guide also points to u-center 2.
-- **u-blox's own documents** start from the
-  [getting-started note for the ZED-F9R](https://content.u-blox.com/sites/default/files/documents/ZED-F9R-GettingStarted_AppNote_UBX-22035176.pdf),
-  linked at the bottom of the hookup guide. From there:
-  - the [integration manual](https://www.u-blox.com/docs/UBX-20039643) explains how the receiver
-    behaves;
-  - the [interface description](https://www.u-blox.com/docs/UBX-22010984) defines every message
-    and configuration key.
+- **The [product page](https://www.ardusimple.com/product/simplertk2b-fusion/)** leads to the board's [hookup guide](https://www.ardusimple.com/rtk-ins-simplertk2b-f9r-hookup-guide/).
+- **The pin details** were not in the hookup guide.
+  They were in the [guide for a sibling board](https://www.ardusimple.com/user-guide-simplertk2b-budget/), the simpleRTK2B Budget, which carries a ZED-F9P rather than the F9R.
+  Its section on the [Arduino rails](https://www.ardusimple.com/user-guide-simplertk2b-budget/#arduino) shows which header pins carry which UART.
+  That guide also points to u-center 2.
+- **u-blox's own documents** start from the [getting-started note for the ZED-F9R](https://content.u-blox.com/sites/default/files/documents/ZED-F9R-GettingStarted_AppNote_UBX-22035176.pdf), linked at the bottom of the hookup guide.
+  From there:
+  - the [integration manual](https://www.u-blox.com/docs/UBX-20039643) explains how the receiver behaves;
+  - the [interface description](https://www.u-blox.com/docs/UBX-22010984) defines every message and configuration key.
 
 **What to look for.** On the Arduino rails, the pins a UART needs:
 
@@ -93,8 +85,8 @@ It isn't needed for this lab, but a box built around timing will need it later:
 	<figcaption>Integration manual §3.2.5.2, on time-tagging sensor data. Screenshot of <a href="https://www.u-blox.com/docs/UBX-20039643">the manual</a>.</figcaption>
 </figure>
 
-The interface description shows how much of the receiver lives in UBX messages. Each has a class,
-an ID and a fixed layout, like `ESF-RAW`, which carries the IMU's raw samples:
+The interface description shows how much of the receiver lives in UBX messages.
+Each has a class, an ID and a fixed layout, like `ESF-RAW`, which carries the IMU's raw samples:
 
 <figure>
 	<img src={esfRaw} alt="u-blox interface description section 3.11.4, UBX-ESF-RAW (0x10 0x03), raw sensor measurements. Output message, length 4 + n times 8 bytes. Payload: a 4-byte reserved0 field, then a repeated group of a 4-byte data field, whose bits 23 to 0 are dataField and bits 31 to 24 dataType, and a 4-byte sTtag, the sensor time tag." width="862" height="490" />
@@ -102,22 +94,19 @@ an ID and a fixed layout, like `ESF-RAW`, which carries the IMU's raw samples:
 </figure>
 
 **What I learned.**
-- **The documents come in layers.** The board maker documents the board, and the chip maker
-  documents the chip. The pins are the board's business, and the messages are the chip's.
-- **A sibling board's guide is a start, not an answer.** This board's own silkscreen has the final
-  word on which pin is which.
-- **Every message has a definition to read before parsing it.** `ESF-RAW`'s layout is the one this
-  lab ends up decoding.
+- **The documents come in layers.** The board maker documents the board, and the chip maker documents the chip.
+  The pins are the board's business, and the messages are the chip's.
+- **A sibling board's guide is a start, not an answer.** This board's own silkscreen has the final word on which pin is which.
+- **Every message has a definition to read before parsing it.** `ESF-RAW`'s layout is the one this lab ends up decoding.
 
 ## 2. Configuring UART1 in u-center 2
 
-**What it is for.** Out of the box, UART1 runs at 38400 baud and sends NMEA text. UBX is enabled
-on it, but no UBX message is switched on (integration manual §3.1.3; USB starts the same way).
-Making the receiver send the messages I care about on UART1, the port on the header pins, is what
-gives the rest of the lab something to look at.
+**What it is for.** Out of the box, UART1 runs at 38400 baud and sends NMEA text.
+UBX is enabled on it, but no UBX message is switched on (integration manual §3.1.3; USB starts the same way).
+Making the receiver send the messages I care about on UART1, the port on the header pins, is what gives the rest of the lab something to look at.
 
-**How it is done.** In u-center 2, connect to the receiver. Then, under *Device
-configuration*, *Advanced configuration*, set keys by name and save them as a named configuration.
+**How it is done.** In u-center 2, connect to the receiver.
+Then, under *Device configuration*, *Advanced configuration*, set keys by name and save them as a named configuration.
 I wanted the IMU's raw samples, `ESF-RAW`, and kept the configuration as `UART1-Recording`:
 
 <figure>
@@ -125,8 +114,8 @@ I wanted the IMU's raw samples, `ESF-RAW`, and kept the configuration as `UART1-
 	<figcaption>The configuration in u-center 2: fifteen changes, five keys each written to RAM, BBR and flash.</figcaption>
 </figure>
 
-It sets five keys, each in all three layers: RAM, BBR and flash. Their meanings are from the
-interface description, §6.9.9 (`CFG-MSGOUT`) and §6.9.10 (`CFG-NAV2`).
+It sets five keys, each in all three layers: RAM, BBR and flash.
+Their meanings are from the interface description, §6.9.9 (`CFG-MSGOUT`) and §6.9.10 (`CFG-NAV2`).
 
 | key                            | value  | what it does                                  |
 | ------------------------------ | -----: | --------------------------------------------- |
@@ -136,24 +125,21 @@ interface description, §6.9.9 (`CFG-MSGOUT`) and §6.9.10 (`CFG-NAV2`).
 | `CFG-MSGOUT-UBX_ESF_RAW_UART1` |     50 | `ESF-RAW` output on UART1                     |
 | `CFG-NAV2-OUT_ENABLED`         |      1 | the secondary, GNSS-only output (NAV2)        |
 
-**What to look for.** That u-center accepts each change, and that the key shows its new value in
-each layer it was written to.
+**What to look for.** That u-center accepts each change, and that the key shows its new value in each layer it was written to.
 
 **What I learned.**
-- **Each port is configured on its own.** These keys change UART1 only: its protocols, its baud
-  rate, and which messages go out on it. USB keeps its own settings and still sends NMEA.
-- **A message's rate is per port.** `CFG-MSGOUT-UBX_ESF_RAW_UART1` turns `ESF-RAW` on for UART1
-  alone. Every message has one such key for each port.
-- **Configuration has layers.** RAM is lost at power-off, BBR lasts while a backup supply holds,
-  and flash is permanent. Writing to flash, as here, makes the change survive a power cycle, but
-  it also means the board no longer starts from its defaults. The box itself will write RAM and
-  BBR only, and touch flash only after asking.
+- **Each port is configured on its own.** These keys change UART1 only: its protocols, its baud rate, and which messages go out on it.
+  USB keeps its own settings and still sends NMEA.
+- **A message's rate is per port.** `CFG-MSGOUT-UBX_ESF_RAW_UART1` turns `ESF-RAW` on for UART1 alone.
+  Every message has one such key for each port.
+- **Configuration has layers.** RAM is lost at power-off, BBR lasts while a backup supply holds, and flash is permanent.
+  Writing to flash, as here, makes the change survive a power cycle, but it also means the board no longer starts from its defaults.
+  The box itself will write RAM and BBR only, and touch flash only after asking.
 - **The baud rate is now 115200.** Anything listening on UART1 has to use the same rate.
 
 ## 3. Checking that bytes flow
 
-**What it is for.** Confirming, before writing any code, that the pins are alive: that bytes come
-out of `TX1` at the baud rate just configured.
+**What it is for.** Confirming, before writing any code, that the pins are alive: that bytes come out of `TX1` at the baud rate just configured.
 
 **How it is done.** Wire an FTDI USB-serial adapter to the board:
 
@@ -161,9 +147,9 @@ out of `TX1` at the baud rate just configured.
 - the adapter's `GND` to the board's `GND`;
 - the adapter's logic level matched to the board's IOREF.
 
-IOREF is the voltage the UART pins swing between ground and. A 3.3 V adapter that sees 5 V on its
-`RX` can be damaged, and so can a Raspberry Pi's GPIO, so this is worth checking before the first
-wire goes on. On this board a slide switch beside the F9R module sets it:
+IOREF is the voltage the UART pins swing between ground and.
+A 3.3 V adapter that sees 5 V on its `RX` can be damaged, and so can a Raspberry Pi's GPIO, so this is worth checking before the first wire goes on.
+On this board a slide switch beside the F9R module sets it:
 
 <figure>
 	<img src={ioref} alt="Close-up of the board beside the ZED-F9R module. A vertical slide switch is labelled IOREF = 3V3, 5V = OUTPUT at its top end and IOREF & 5V ARE INPUTS at its bottom end. To its right, the IOREF LED (LED6) is lit blue and the NO RTK LED is lit red. Below, connector J4 is labelled PIXHAWK + POWER, with pins VIN, RX1, TX1, TPS, EVT and GND." width="1600" height="1200" />
@@ -172,21 +158,19 @@ wire goes on. On this board a slide switch beside the F9R module sets it:
 
 As the labels read, the two positions do this:
 
-- **`IOREF = 3V3, 5V = OUTPUT`:** the board sets IOREF to 3.3 V itself, and supplies 5 V on its
-  `5V` pin.
-- **`IOREF & 5V ARE INPUTS`:** the connected hardware supplies both. That matches the sibling
-  board's guide from step 1, which says IOREF must then be connected to the voltage the other
-  hardware needs.
+- **`IOREF = 3V3, 5V = OUTPUT`:** the board sets IOREF to 3.3 V itself, and supplies 5 V on its `5V` pin.
+- **`IOREF & 5V ARE INPUTS`:** the connected hardware supplies both.
+  That matches the sibling board's guide from step 1, which says IOREF must then be connected to the voltage the other hardware needs.
 
-For a 3.3 V adapter, and later for the Pi, the first position is the one to want. Confirm it with
-a meter on the `IOREF` pin before connecting anything.
+For a 3.3 V adapter, and later for the Pi, the first position is the one to want.
+Confirm it with a meter on the `IOREF` pin before connecting anything.
 
 > [!TODO]
 > Which position is the switch in, and did you measure IOREF?
 
-Plugged into the computer, the adapter appears as `/dev/ttyUSB0`. It is a bridge chip: on one side
-it speaks UART, on the other USB, and Linux's `ftdi_sio` driver presents it as a serial port. Open
-that port in picocom at UART1's baud rate:
+Plugged into the computer, the adapter appears as `/dev/ttyUSB0`.
+It is a bridge chip: on one side it speaks UART, on the other USB, and Linux's `ftdi_sio` driver presents it as a serial port.
+Open that port in picocom at UART1's baud rate:
 
 ```sh
 picocom -b 115200 /dev/ttyUSB0      # exit with Ctrl+A, then Ctrl+X
@@ -197,31 +181,28 @@ picocom -b 115200 /dev/ttyUSB0      # exit with Ctrl+A, then Ctrl+X
 	<figcaption>UART1 through the FTDI adapter in picocom: binary UBX, shown as whatever characters happen to be printable.</figcaption>
 </figure>
 
-**What to look for.** A steady stream, and it will look like garbage. UBX is binary, and a terminal
-can only show the bytes that happen to be printable. The pattern still shows through: a `b` keeps
-recurring, followed shortly by `<`. Every UBX frame starts with the two sync bytes `b5 62`, and
-`0x62` is the letter `b`. An `ESF-RAW` frame carries a 60-byte payload, and 60 is `0x3c`, the
-character `<`. So each `b … <` is the start of another IMU message.
+**What to look for.** A steady stream, and it will look like garbage.
+UBX is binary, and a terminal can only show the bytes that happen to be printable.
+The pattern still shows through: a `b` keeps recurring, followed shortly by `<`.
+Every UBX frame starts with the two sync bytes `b5 62`, and `0x62` is the letter `b`.
+An `ESF-RAW` frame carries a 60-byte payload, and 60 is `0x3c`, the character `<`.
+So each `b … <` is the start of another IMU message.
 
 **What I learned.**
-- **Garbage that keeps coming is the answer here.** It says the pins are alive. A wrong baud rate
-  also gives garbage, though, so the real confirmation comes when the bytes parse, in the next
-  step.
-- **The baud rate is real on an adapter.** An FTDI chip drives an actual UART at the rate it is
-  given, so it has to match `CFG-UART1-BAUDRATE`.
-- **`/dev/ttyUSB*` means a bridge chip.** The receiver's own USB port appears differently, as
-  `/dev/ttyACM*`, and that is a story for the ledger's questions.
+- **Garbage that keeps coming is the answer here.** It says the pins are alive.
+  A wrong baud rate also gives garbage, though, so the real confirmation comes when the bytes parse, in the next step.
+- **The baud rate is real on an adapter.** An FTDI chip drives an actual UART at the rate it is given, so it has to match `CFG-UART1-BAUDRATE`.
+- **`/dev/ttyUSB*` means a bridge chip.** The receiver's own USB port appears differently, as `/dev/ttyACM*`, and that is a story for the ledger's questions.
 
 ## 4. Recording a file and parsing it
 
-**What it is for.** Turning the stream into something a program can check. Garbage on a screen
-says bytes arrive. A parser that finds valid messages in them says the baud rate, the wiring and
-the configuration are all right.
+**What it is for.** Turning the stream into something a program can check.
+Garbage on a screen says bytes arrive.
+A parser that finds valid messages in them says the baud rate, the wiring and the configuration are all right.
 
 **How it is done.** Two short scripts, run from the repository root.
 
-`tools/ubx-record.py` copies the port's bytes, unchanged, into a file, and prints a running count
-so you can see data is flowing:
+`tools/ubx-record.py` copies the port's bytes, unchanged, into a file, and prints a running count so you can see data is flowing:
 
 <details>
 <summary><code>tools/ubx-record.py</code>, in full</summary>
@@ -280,9 +261,8 @@ if __name__ == "__main__":
 
 </details>
 
-`tools/ubx-parse.py` reads the file with pyubx2 and counts the messages of each kind. It also
-counts the errors the parser hit, and prints the last few messages. pyubx2 leaves `ESF-RAW`'s data
-words as raw bytes, so the script decodes those itself, from the layout in step 1's figure:
+`tools/ubx-parse.py` reads the file with pyubx2 and counts the messages of each kind.
+It also counts the errors the parser hit, and prints the last few messages. pyubx2 leaves `ESF-RAW`'s data words as raw bytes, so the script decodes those itself, from the layout in step 1's figure:
 
 <details>
 <summary><code>tools/ubx-parse.py</code>, in full</summary>
@@ -391,10 +371,8 @@ Close picocom first: only one program at a time can hold the port.
 **What to look for.**
 - **`ESF-RAW` counted in the hundreds**, which means the bytes parse.
 - **A few `GNTXT` lines.** They are NMEA text messages, sent even with NMEA output off.
-- **At most one error.** The recording stops wherever Ctrl+C or `--seconds` lands, usually partway
-  through a frame, and the parser reports that last frame as cut short.
-- **The last messages' values should be plausible.** With the board lying flat, `accel_z` should be
-  close to gravity, the gyro rates close to zero, and the temperature close to the room's.
+- **At most one error.** The recording stops wherever Ctrl+C or `--seconds` lands, usually partway through a frame, and the parser reports that last frame as cut short.
+- **The last messages' values should be plausible.** With the board lying flat, `accel_z` should be close to gravity, the gyro rates close to zero, and the temperature close to the room's.
 
 **What I learned.**
 
@@ -403,8 +381,8 @@ Close picocom first: only one program at a time can hold the port.
 
 ## 5. Recording with the OpenLog
 
-**What it is for.** Recording without a computer. I had a SparkFun OpenLog sitting around, so it
-was the natural next step: a logger that can travel with the board.
+**What it is for.** Recording without a computer.
+I had a SparkFun OpenLog sitting around, so it was the natural next step: a logger that can travel with the board.
 
 **How it is done.** Wire the OpenLog in place of the adapter:
 
@@ -429,29 +407,22 @@ pixi run python tools/ubx-parse.py LOG00001.TXT --last 2
 > [!TODO]
 > Run it on one of the card's logs, and paste the output or a screenshot here.
 
-**What to look for.** The same message kinds as step 4, in larger numbers, since the logger runs
-for as long as it has power.
+**What to look for.** The same message kinds as step 4, in larger numbers, since the logger runs for as long as it has power.
 
 **What I learned.**
-- **An SD logger needs no computer, but it has no clock.** The file holds the bytes and nothing
-  else. A recording through the adapter, by contrast, could stamp each read with the computer's
-  time. That matters later, because some of the ledger's questions are about timing.
-- **Green carries the OpenLog's output into the receiver's `RX1`.** Whatever the OpenLog
-  transmits reaches UART1's input, so that wire should come off if UART1 is ever wired to anything
-  else.
+- **An SD logger needs no computer, but it has no clock.** The file holds the bytes and nothing else.
+  A recording through the adapter, by contrast, could stamp each read with the computer's time.
+  That matters later, because some of the ledger's questions are about timing.
+- **Green carries the OpenLog's output into the receiver's `RX1`.** Whatever the OpenLog transmits reaches UART1's input, so that wire should come off if UART1 is ever wired to anything else.
 
 > [!TODO]
 > Add anything else, in your own words.
 
 ## What comes next
 
-With data flowing from the pins into a file and a parser, the ledger's questions about the
-receiver become things to try rather than things to read about. The first ones this sets up:
+With data flowing from the pins into a file and a parser, the ledger's questions about the receiver become things to try rather than things to read about.
+The first ones this sets up:
 
-- [#1](../../reference/open-questions/index.md#blocking-m1), which firmware the receiver runs:
-  poll `UBX-MON-VER`.
-- [#11](../../reference/open-questions/index.md#blocking-m2), the IMU's sample rate and how
-  `ESF-RAW` frames it: steps 4 and 5 already show the framing, and a recording through the adapter
-  can time it.
-- [#14](../../reference/open-questions/index.md#blocking-m2), whether a logger and the Pi conflict
-  on the receiver's ports: this lab puts the logger on UART1.
+- [#1](../../reference/open-questions/index.md#blocking-m1), which firmware the receiver runs: poll `UBX-MON-VER`.
+- [#11](../../reference/open-questions/index.md#blocking-m2), the IMU's sample rate and how `ESF-RAW` frames it: steps 4 and 5 already show the framing, and a recording through the adapter can time it.
+- [#14](../../reference/open-questions/index.md#blocking-m2), whether a logger and the Pi conflict on the receiver's ports: this lab puts the logger on UART1.
