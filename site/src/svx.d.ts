@@ -14,8 +14,8 @@ declare module '*.md' {
 
 // The content database, which `vite.config.ts` serves under these names.
 declare module '$cms' {
-    import type { SkoroCms } from '@mvarble/mesearch-cms/presets/skoro/runtime';
-    export const cms: SkoroCms;
+    import type { SiteCms } from '$lib/cms/runtime';
+    export const cms: SiteCms;
 }
 
 declare module '$cms/loaders' {

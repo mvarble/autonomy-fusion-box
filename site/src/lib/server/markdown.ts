@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { base } from '$app/paths';
-import type { SkoroDocument } from '$lib/documents';
+import type { SiteDocument } from '$lib/documents';
 import { describeGraph } from '$lib/graph/describe';
 import type { GraphSpec } from '$lib/graph/spec';
 import { expandFileRefs } from '../../../plugins/file-ref';
@@ -26,7 +26,7 @@ const imageUrls = import.meta.glob<string>('/content/**/*.{jpg,jpeg,png,webp,gif
 // to another document pointed at that document's Markdown.
 //
 // The build runs from `site/`, which is where the content database's filenames start.
-export function markdownOf(doc: SkoroDocument): string {
+export function markdownOf(doc: SiteDocument): string {
     const file = path.resolve(process.cwd(), doc.filename);
     const raw = fs.readFileSync(file, 'utf8');
     const match = /^---\n[\s\S]*?\n---\n/.exec(raw);
@@ -49,7 +49,7 @@ export function markdownOf(doc: SkoroDocument): string {
 // The specs a document imports by name, `import { name } from './x.graph'`, from `modules`.
 function importedSpecs<T>(
     script: string,
-    doc: SkoroDocument,
+    doc: SiteDocument,
     modules: Record<string, Record<string, T>>,
 ): Map<string, T> {
     const dir = path.posix.dirname(`/${doc.filename}`);
@@ -71,7 +71,7 @@ function importedSpecs<T>(
 
 // Resolves each `<ModelGraph spec={name} />` through the document's own `import { name } from
 // './x.graph'`, and replaces the tag with `describeGraph` of that spec.
-function describeGraphs(body: string, script: string, doc: SkoroDocument): string {
+function describeGraphs(body: string, script: string, doc: SiteDocument): string {
     const specs = importedSpecs(script, doc, graphModules);
     return body.replace(/<ModelGraph\s+spec=\{(\w+)\}\s*\/>/g, (tag, name: string) => {
         const spec = specs.get(name);
@@ -109,7 +109,7 @@ function inlineStatements(body: string, script: string, file: string): string {
 
 // Replaces each `src={name}` whose `name` is an image the document imports, `import name from
 // './x.jpg'`, with the URL the build serves that image from.
-function imageSources(body: string, script: string, doc: SkoroDocument): string {
+function imageSources(body: string, script: string, doc: SiteDocument): string {
     const dir = path.posix.dirname(`/${doc.filename}`);
     const urls = new Map<string, string>();
     for (const [, name, from] of script.matchAll(/import\s+(\w+)\s+from\s*['"](\.[^'"]+)['"]/g)) {
@@ -136,7 +136,7 @@ function imageFigures(body: string): string {
 
 // Links are written the way the files sit on disk (`../../math/retraction/`, `plan.md`). Here they
 // become absolute links to the Markdown of the document they name.
-function relinked(markdown: string, doc: SkoroDocument): string {
+function relinked(markdown: string, doc: SiteDocument): string {
     const dir = path.posix.dirname(doc.filename);
     return markdown.replace(/\]\((\.{0,2}[^):\s]*?)(#[^)\s]*)?\)/g, (whole, href: string, hash) => {
         if (!href || /^[a-z]+:/i.test(href) || href.startsWith('/')) return whole;
