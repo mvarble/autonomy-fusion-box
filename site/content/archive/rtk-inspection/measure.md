@@ -32,17 +32,20 @@ What the photo shows, read from the silkscreen:
 - **The module** is marked `ZED-F9R-01B-00`.
 - **Two USB-C ports.** The one labelled POWER + XBEE is at the upper left and POWER + GPS at the
   right. The probe used POWER + GPS.
-- **The wires.** Yellow and green go to the bottom header. Green is in the pin labelled `RX1`.
-  Yellow is in the pin beside it, whose label the wire hides. Red goes to the top header, at the pin
-  above `LED7` (`5V IN/OUT`). Blue goes to the end of the XBee socket's lower row, next to a `GND`
-  label. All four leave through the enclosure wall.
+- **The wires**, all four leaving through the enclosure wall:
+  - **yellow:** `TX1`, on the bottom header;
+  - **green:** `RX1`, beside it;
+  - **red:** 5 V, at the top header's pin above `LED7` (`5V IN/OUT`);
+  - **blue:** ground, at the end of the XBee socket's lower row.
+
+  So UART1 and power go to the logger, and the F9R's UART1 output is what it records.
 - **J4, a 6-pin JST connector labelled PIXHAWK + POWER**, at the right edge. Its pins read, from 1
   to 6: `VIN`, `RX1`, `TX1`, `TPS`, `EVT`, `GND`. So UART1, the timepulse and an event input are on
   one connector.
 - **The bottom header** also carries `RX2`, `TX2`, `GEOFENCE`, `EXTINT`, `TPS`, `GND`, `RST`,
   `SDA` and `SCL`. There is a separate `TPS` pad labelled `J9` near the top.
 - **A slide switch labelled XBEE TO GPS UART1 / XBEE TO GPS UART2** picks which of the F9R's UARTs
-  the XBee socket reaches. Its position cannot be read reliably from the photo.
+  the XBee socket reaches. It is set to XBEE TO GPS UART2, and the socket is empty.
 - **A second slide switch** chooses between `IOREF = 3V3, 5V = OUTPUT` and
   `IOREF & 5V ARE INPUTS`.
 - **The footprint labelled `BAT`** in the middle of the board, a circle with two pads, has nothing
@@ -57,10 +60,6 @@ serial input to a file on an SD card. Its `config.txt`, verbatim:
 115200,26,3,0,1,1,0
 baud,escape,esc#,mode,verb,echo,ignoreRX
 ```
-
-> [!TODO]
-> Confirm the wires: is yellow on `TX1`, red on 5 V and blue on ground? Which position is the XBee
-> switch in?
 
 **First, u-center 2 on Windows.** I polled `UBX-MON-VER` there, and used its answer to check the
 reading below.
@@ -115,8 +114,8 @@ configured UBX output on the board's UART pins, not on USB.
 
 **Then the OpenLog's recordings.** The SD card held four logs, `LOG00001.TXT` to `LOG00004.TXT`,
 from that earlier setup. I don't know when they were recorded or for how long, and the GPS antenna
-was most likely not connected for any of them. They are what the F9R sent out of the UART the
-OpenLog listens on, byte for byte, with no timestamps of the OpenLog's own.
+was most likely not connected for any of them. They are what the F9R sent out of UART1, byte for
+byte, with no timestamps of the OpenLog's own.
 
 pyubx2 1.4.1 parses `ESF-RAW` but leaves each data word as raw bytes, so I wrote
 `tools/ubx-dump.py`. It frames the byte stream itself, so that every byte is counted as a good UBX
@@ -570,8 +569,8 @@ right only when the wraps are unwrapped, which confirms them.
   time, would give both the tick and the rate. Counting messages per second would undercount by the
   dropped messages.
 - **About 3 % of the messages never reached the card.** That is with zero corrupt frames, at 115200
-  baud, which tells me the UART the OpenLog listens on was set to 115200 to match it. The default
-  is 38400 `[IM §3.1.3]`. The `txbuf alloc S` warnings look related, but they don't line up with the gaps,
+  baud, which tells me UART1 was set to 115200 to match the OpenLog. The default is 38400
+  `[IM §3.1.3]`. The `txbuf alloc S` warnings look related, but they don't line up with the gaps,
   so I can't say what they mean. Whatever records `ESF-RAW` has to expect gaps and detect them from
   `sTtag`, not assume a fixed rate.
 - **The accelerometer reads high.** The magnitude of the acceleration vector, averaged over each
@@ -592,7 +591,8 @@ right only when the wraps are unwrapped, which confirms them.
   answers its first step. `TPS` and `EVT` are on J4, the PIXHAWK + POWER connector, and `TPS` and
   `EXTINT` are on the bottom header. Probing the pin with the AD3 is still to come.
 - [#14](../../reference/open-questions/index.md#blocking-m2) stays **OPEN**. On this board, UART1
-  is on both J4 and the bottom header, and a switch connects the XBee socket to UART1 or UART2.
+  is on both J4 and the bottom header, and a switch connects the XBee socket to UART1 or UART2. As
+  found, the OpenLog was on UART1 and the switch gave the empty XBee socket UART2.
 - [#11](../../reference/open-questions/index.md#blocking-m2) stays **OPEN**. The framing is
   answered: one sample of each of the seven types per message, with one shared `sTtag`, the usual
   step 257 ticks. The rate in Hz waits for a host-clocked capture.
