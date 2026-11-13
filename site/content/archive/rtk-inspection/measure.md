@@ -508,6 +508,24 @@ The *Logic* tool shows `DIO 0` with a UART decoder added on it.
 - **The logic analyzer's threshold matters.** It reads a level above 1.4 V as a 1, which a 3.15 V signal clears easily.
 - **The Analog Discovery 3 is the instrument for what comes next.** The timepulse questions, #2 and #3, need exactly this kind of look at a signal.
 
+## Results
+
+What each step found, gathered in one place:
+
+| step | what was checked | result |
+| ---- | ---------------- | ------ |
+| 2 | UART1's configuration in u-center 2 | UBX on and NMEA off on UART1, 115200 baud, `ESF-RAW` on UART1, NAV2 output on; each written to RAM, BBR and flash |
+| 3 | bytes on `TX1`, through the FTDI adapter in picocom | a steady stream, with the `b … <` of each UBX frame's sync and length showing through |
+| 3 | the IOREF switch | set to `IOREF = 3V3, 5V = OUTPUT` |
+| 4 | 10.0 s of UART1 recorded through the adapter | 65 883 bytes, 6 586 to 6 728 a second; 969 messages parsed (959 `ESF-RAW`, 10 `GNTXT`); 3 errors: 2 frames cut short mid-stream, 1 cut short at the end |
+| 5 | one OpenLog recording, `LOG00004.TXT` | 158 391 bytes; 2 339 messages parsed (2 315 `ESF-RAW`, 24 `GNTXT`); 2 errors: 1 frame cut short mid-stream, 1 cut short at the end |
+| 6 | UART1's high level, on the scope | 3.154 V, read with a cursor |
+| 6 | UART1's bytes, on the logic analyzer | each byte decoded, with its start bit, eight data bits and end marked |
+
+Each of steps 4 and 5 is one run.
+The raw data is the screenshots in each step.
+The step 4 recording, `uart1.ubx`, is kept on my computer and not in the repository, and the OpenLog's file stays on its SD card.
+
 ## What comes next
 
 With data flowing from the pins into a file and a parser, the ledger's questions about the receiver become things to try rather than things to read about.
