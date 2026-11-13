@@ -1,5 +1,5 @@
 ---
-summary: A first session with the ArduSimple ZED-F9R board. It reads the firmware (HPS 1.40, protocol 33.40) over USB, reads the board's silkscreen, and decodes old OpenLog recordings of the IMU, which give `ESF-RAW`'s framing (one 7-sample set per message, 257 time-tag ticks apart) but not yet its rate in Hz.
+summary: A first session with the ArduSimple ZED-F9R board. It gets UBX out of UART1 into an SD logger, reads the firmware (HPS 1.40, protocol 33.40) over USB, reads the board's silkscreen, and decodes the logger's recordings of the IMU, which give `ESF-RAW`'s framing (one 7-sample set per message, 257 time-tag ticks apart) but not yet its rate in Hz.
 ---
 
 <script>
@@ -11,17 +11,16 @@ summary: A first session with the ArduSimple ZED-F9R board. It reads the firmwar
 </script>
 
 Before the box can configure the receiver, stamp its data or decode its IMU, it has to know what is
-actually on the bench. This lab is a first session with the ArduSimple ZED-F9R board. It runs four
+actually on the bench. This lab is a first session with the ArduSimple ZED-F9R board. It runs five
 checks, each small enough for an afternoon:
 
-1. [how the receiver appears to Linux over USB](#1-how-the-receiver-appears-over-usb);
-2. [which firmware it runs](#2-which-firmware-the-receiver-runs);
-3. [what the board itself says](#3-what-the-board-says), read from its silkscreen;
-4. [what its IMU stream looks like](#4-what-the-imu-stream-looks-like), from recordings made long
-   ago with an SD-card logger.
-
-Before them comes [the story](#before-this-lab-a-first-attempt-months-ago) of a first attempt
-with the same board, months earlier, which left it wired the way this lab found it.
+1. [getting data out of the pins](#1-getting-data-out-of-the-pins): configuring a UART and
+   recording what it sends;
+2. [how the receiver appears to Linux over USB](#2-how-the-receiver-appears-over-usb);
+3. [which firmware it runs](#3-which-firmware-the-receiver-runs);
+4. [what the board itself says](#4-what-the-board-says), read from its silkscreen;
+5. [what its IMU stream looks like](#5-what-the-imu-stream-looks-like), decoded from the
+   recordings of check 1.
 
 Each check follows the same pattern: what to check, why it matters and where it fits in the box,
 how it is done, what came out, and what it taught. Two ledger questions are the targets:
@@ -37,18 +36,42 @@ move between revisions:
 - `[IM]` is the ZED-F9R Integration Manual, UBX-20039643. Its URL in the ledger served revision
   R10 on 2026-11-13. It explains how the receiver behaves.
 
-Every check that talks to the receiver here only reads from it. None changes its configuration.
+Check 1 configures the receiver. Every later check only reads from it.
 
-## Before this lab: a first attempt, months ago
+## The setup
 
-This board did not arrive fresh for this lab. Months earlier, before the box was an idea, I
-started by simply playing with it: finding its documentation, configuring it, and getting GPS, IMU
-and INS data out of it and onto an SD card. Along the way it struck me that aligning a camera's
-timing with a Raspberry Pi's would be a good way to learn this properly, and that idea grew into
-the fusion box. What follows is that first round of play. It is the reason the board has four
-wires on it, and it explains some of what the checks below found.
+<figure>
+	<img src={board} alt="The ArduSimple board in a black enclosure, with a red, a blue, a yellow and a green wire on its headers, leaving through the enclosure wall. The u-blox ZED-F9R module sits at the lower right, beside the SMA antenna connector." width="1444" height="1362" />
+	<figcaption>The board as wired for this lab. The F9R module is at the lower right, next to the SMA antenna connector and the POWER + GPS USB-C port.</figcaption>
+</figure>
 
-**Finding the documentation.** I started at the
+The board sits in a 3D-printed enclosure and is powered over USB. The enclosure is a
+design I found online, [on Thingiverse](https://www.thingiverse.com/thing:3551604), and the Santa
+Barbara Public Library printed it for me, for free. A public library is worth asking before buying
+a printer for one part. The four coloured wires run to a
+SparkFun OpenLog, an SD-card logger. [Check 1](#1-getting-data-out-of-the-pins) says why.
+
+The host is my desktop computer, running Arch Linux, kernel 7.2.14-arch1-1. The scripts run from
+the Pixi environment at the repository root: Python 3.15.2, pyubx2 1.4.1 and pyserial 3.5. A
+Windows install of u-center 2, u-blox's own tool, served as a cross-check.
+
+## 1. Getting data out of the pins
+
+**What to check.** Whether the receiver can be configured to send UBX out of a UART on the board's
+header pins, and whether something on the far end of a wire receives it.
+
+**Why it matters.** The box reads the receiver over two paths. The Pi takes it over USB, through
+`ubx_mux`, and an SD logger on a UART keeps an independent raw-UBX backup for post-processed ground
+truth ([what the box is](../../start/what-the-box-is/index.svx)). A UART is also the other way a
+host, the Pi included, can read the receiver. So the first thing worth knowing is whether bytes
+come out of the pins at all, at a baud rate the far end agrees with. It is also the smallest
+complete loop through embedded work, and the right first step for someone new to it: documents,
+configuration, wiring, and bytes on a screen.
+
+**How it is done.** This was the first thing I did, in three steps: find the documents, configure
+the receiver, then check the bytes.
+
+*Finding the documentation.* I started at the
 [product page](https://www.ardusimple.com/product/simplertk2b-fusion/) for the simpleRTK2B Fusion,
 which led to its
 [hookup guide](https://www.ardusimple.com/rtk-ins-simplertk2b-f9r-hookup-guide/). The general
@@ -68,7 +91,7 @@ guide was u-blox's own
 [getting-started note for the ZED-F9R](https://content.u-blox.com/sites/default/files/documents/ZED-F9R-GettingStarted_AppNote_UBX-22035176.pdf),
 and from there the two documents this lab leans on. In the
 [integration manual](https://www.u-blox.com/docs/UBX-20039643), a search for "IMU" turned up the
-section on time tagging. I didn't need it then, but I could tell that time would matter:
+section on time tagging. It isn't needed for this check, but it was clear that time would matter later:
 
 <figure>
 	<img src={timeTagging} alt="ZED-F9R Integration Manual section 3.2.5.2, UBX-ESF-MEAS time tagging. The epoch of sensor data can be taken from the reception time of the message's first byte or from a time mark on an external input. Latency is configurable per sensor. Time tags for all UBX-ESF-MEAS data must have the same resolution, and the receiver generates ESF-MEAS from its internal IMU with a default time tag resolution of 1 millisecond." width="847" height="422" />
@@ -83,9 +106,9 @@ receiver lives in UBX messages, each with a class, an ID and a fixed layout, lik
 	<figcaption>Interface description §3.11.4, <code>UBX-ESF-RAW</code>. Screenshot of <a href="https://www.u-blox.com/docs/UBX-22010984">the interface description</a>.</figcaption>
 </figure>
 
-**Configuring and logging.** I ran u-center 2 on Windows and configured the receiver to send the
-messages I wanted to parse and interpret out of UART1. I saved the configuration in u-center as
-`UART1-Recording`:
+*Configuring the receiver.* I ran u-center 2 on Windows and configured the receiver to send the
+messages I wanted to parse and interpret out of UART1, then saved the configuration in u-center as
+`UART1-Recording`. This is the one check in this lab that changes the receiver's configuration.
 
 <figure>
 	<img src={ucenter} alt="u-center 2's Device configuration window, Advanced configuration, with the saved configuration UART1-Recording. Key CFG-MSGOUT-UBX_ESF_RAW_UART1 is selected, value 50, with layers RAM 50, Flash 50 and Default 0 listed under it. The list of configuration changes sets each of CFG-UART1OUTPROT-UBX to 1, CFG-UART1OUTPROT-NMEA to 0, CFG-UART1-BAUDRATE to 115200, CFG-MSGOUT-UBX_ESF_RAW_UART1 to 50 and CFG-NAV2-OUT_ENABLED to 1, each in the RAM, BBR and Flash layers." width="1634" height="977" />
@@ -103,46 +126,39 @@ It sets five keys, each in all three layers: RAM, BBR and flash. Their meanings 
 | `CFG-MSGOUT-UBX_ESF_RAW_UART1` |     50 | `ESF-RAW` output on UART1                     |
 | `CFG-NAV2-OUT_ENABLED`         |      1 | the secondary, GNSS-only output (NAV2)        |
 
-To check that something came out, I connected the UART1 pins to an FTDI USB-serial adapter and
-watched the bytes arrive in picocom on Linux. Then I swapped the adapter for a SparkFun OpenLog,
-set to the same 115200 baud, which wrote UART1 to an SD card.
+*Checking the bytes.* I connected the UART1 pins to an FTDI USB-serial adapter and watched the
+bytes arrive in picocom on Linux. Then I swapped the adapter for a SparkFun OpenLog, set to the
+same 115200 baud, which wrote UART1 to an SD card. Its `config.txt`, verbatim:
 
-**In hindsight**, each step of that attempt matches something the checks below came back to:
+```text
+115200,26,3,0,1,1,0
+baud,escape,esc#,mode,verb,echo,ignoreRX
+```
 
-- **The FTDI adapter** is the other kind of USB serial port, a bridge chip on `/dev/ttyUSB*`.
-  [Check 1](#1-how-the-receiver-appears-over-usb) contrasts it with the F9R's own USB.
-- **Configuring UART1 rather than USB** is why USB carries only NMEA today, in
-  [check 2](#2-which-firmware-the-receiver-runs).
-- **The Budget guide is for a different board.** [Check 3](#3-what-the-board-says) reads this
-  board's own silkscreen. Its rule about IOREF matters: that pin sets the UART's voltage level, so
-  it has to match whatever is connected, and the Pi's GPIOs are not 5 V tolerant `[RPI-HW]`.
+The wiring, as the [photo](#the-setup) shows it: the OpenLog takes the F9R's `TX1` (yellow) and
+drives its `RX1` (green), with 5 V (red) and ground (blue).
+
+**What came out.** Data flowed: bytes arrived in picocom through the FTDI adapter, and the OpenLog
+wrote four logs to its card. [Check 5](#5-what-the-imu-stream-looks-like) decodes them. They hold
+exactly what this configuration asked for, `ESF-RAW` on UART1 at 115200 baud.
+
+**What I learned.** Each step here comes back in a later check:
+
+- **The FTDI adapter is the other kind of USB serial port**, a bridge chip on `/dev/ttyUSB*`.
+  [Check 2](#2-how-the-receiver-appears-over-usb) contrasts it with the F9R's own USB.
+- **Configuring UART1 configures only UART1.** USB keeps its own settings, which is why it still
+  carries only NMEA in [check 3](#3-which-firmware-the-receiver-runs).
+- **The Budget guide is for a different board.** [Check 4](#4-what-the-board-says) reads this
+  board's own silkscreen. The guide's rule about IOREF matters: that pin sets the UART's voltage
+  level, so it has to match whatever is connected, and the Pi's GPIOs are not 5 V tolerant
+  `[RPI-HW]`.
+- **Writing to flash makes a configuration permanent.** That is why it is still on the board in
+  [check 4](#4-what-the-board-says). The box itself will write only RAM and BBR, and never flash
+  without asking.
 - **The time-tagging section** describes `ESF-MEAS`, whose time tags have a 1 ms resolution.
-  [Check 4](#4-what-the-imu-stream-looks-like) shows that this does not carry over to
-  `ESF-RAW`.
-- **Writing to flash** is why that configuration is still on the board, in
-  [check 3](#3-what-the-board-says).
-- **The OpenLog's files** are what check 4 decodes, and they hold exactly what this configuration
-  asked for.
+  [Check 5](#5-what-the-imu-stream-looks-like) shows that this does not carry over to `ESF-RAW`.
 
-## The setup
-
-<figure>
-	<img src={board} alt="The ArduSimple board in a black enclosure, with a red, a blue, a yellow and a green wire on its headers, leaving through the enclosure wall. The u-blox ZED-F9R module sits at the lower right, beside the SMA antenna connector." width="1444" height="1362" />
-	<figcaption>The board as probed. The F9R module is at the lower right, next to the SMA antenna connector and the POWER + GPS USB-C port.</figcaption>
-</figure>
-
-The board sits in a 3D-printed enclosure and is powered over USB. The enclosure is a
-design I found online, [on Thingiverse](https://www.thingiverse.com/thing:3551604), and the Santa
-Barbara Public Library printed it for me, for free. A public library is worth asking before buying
-a printer for one part. The four coloured wires are left
-over from [the first attempt](#before-this-lab-a-first-attempt-months-ago). They run to the
-SparkFun OpenLog, and they were left in place for this lab.
-
-The host is my desktop computer, running Arch Linux, kernel 7.2.14-arch1-1. The scripts run from
-the Pixi environment at the repository root: Python 3.15.2, pyubx2 1.4.1 and pyserial 3.5. A
-Windows install of u-center 2, u-blox's own tool, served as a cross-check.
-
-## 1. How the receiver appears over USB
+## 2. How the receiver appears over USB
 
 **What to check.** When the board is plugged in, which device file appears, which kernel driver
 handles it, and whether there is anything between the F9R and the USB cable.
@@ -199,7 +215,7 @@ cdc_acm 1-1.1.3:1.0: ttyACM0: USB ACM device
   though, so a second u-blox device on the same host would get the same one.
 - **On the Pi**, the host process's user needs group `uucp`, or a udev rule.
 
-## 2. Which firmware the receiver runs
+## 3. Which firmware the receiver runs
 
 **What to check.** The receiver's firmware and protocol versions, as the receiver itself reports
 them in `UBX-MON-VER`.
@@ -289,11 +305,11 @@ u-center 2 reported the same value in every field.
 - **The version is one 8-byte poll away, from any host, with no vendor tool.**
 - **USB and the UART pins are configured separately.** Opening the USB port in picocom, a minimal
   serial terminal, showed NMEA sentences and no UBX. That is not a fault. Each port has its own
-  output protocols and its own rate for each message. This board's UBX output had been set up on
-  UART1, for the logger, and USB had been left with the default NMEA output. A binary UBX frame
+  output protocols and its own rate for each message. Check 1 set up UBX output on UART1, for the
+  logger, and left USB with its default NMEA output. A binary UBX frame
   would barely show in a terminal anyway: a stray `µb`, then control characters.
 
-## 3. What the board says
+## 4. What the board says
 
 **What to check.** Read the board itself: which pins carry which signals, how the switches are set,
 which LEDs are lit, and what is fitted.
@@ -327,34 +343,27 @@ board. Product pages and hookup guides often describe another revision of the bo
 - **LEDs:** `POWER` is lit, and so is `NO RTK`, in red. `PVT` is dark, and the photo was taken
   indoors. `5V IN/OUT`, `IOREF` and one of the `GPS>XBEE` / `XBEE>GPS` pair are lit too.
 
-The OpenLog's `config.txt`, verbatim:
-
-```text
-115200,26,3,0,1,1,0
-baud,escape,esc#,mode,verb,echo,ignoreRX
-```
-
 **What I learned.**
 - **The timepulse is on at least three places**, all labelled `TPS`: J4, the bottom header and the
   `J9` pad. An event input is on J4 (`EVT`) and the header (`EXTINT`). Which one the Pi should use,
-  and whether it is clean there, is for the AD3 to say in #2 and #3. The labels only say where to
+  and whether it is clean there, is for the AD3 to say in [#2](../../reference/open-questions/index.md#blocking-m1) and [#3](../../reference/open-questions/index.md#blocking-m1). The labels only say where to
   put the probe.
-- **UART1 is shared.** It is on J4 and on the bottom header, and as found it fed the OpenLog at
-  115200 baud. The default is 38400 `[IM §3.1.3]`; the old configuration set 115200. UART2 went
+- **UART1 is shared.** It is on J4 and on the bottom header, and here it feeds the OpenLog at
+  115200 baud. The default is 38400 `[IM §3.1.3]`; check 1 set 115200. UART2 went
   to the empty XBee socket. That is the shape [#14](../../reference/open-questions/index.md#blocking-m2)
   asks about.
 - **Green carries the OpenLog's output into the F9R's `RX1`.** Whatever the OpenLog transmits
   arrives at the receiver's UART1 input. If UART1 goes to the Pi, that wire comes off first.
-- **The old configuration is in flash.** RAM settings are lost at power-off, and BBR keeps them
-  only while a backup supply holds `[IM §3.1]`. The `BAT` footprint has nothing fitted. The
-  u-center configuration wrote every key to flash as well, which is why UBX still comes out of
-  UART1. In the screenshot, u-center lists `CFG-MSGOUT-UBX_ESF_RAW_UART1` in the RAM and flash
-  layers but not in BBR. That fits a board with no backup supply, but whether BBR survives a power
+- **Check 1's configuration is in flash.** RAM settings are lost at power-off, and BBR keeps them
+  only while a backup supply holds `[IM §3.1]`. The `BAT` footprint has nothing fitted. Check 1
+  wrote every key to flash as well, which is why UBX still comes out of UART1 after a power cycle.
+  In [check 1's screenshot](#1-getting-data-out-of-the-pins), u-center lists
+  `CFG-MSGOUT-UBX_ESF_RAW_UART1` in the RAM and flash layers but not in BBR. That fits a board with no backup supply, but whether BBR survives a power
   cycle is still [#9](../../reference/open-questions/index.md#blocking-m1)'s to measure. Before the
   box changes anything, a `VALGET` of each layer should record what the board holds. The box itself
   writes only RAM and BBR, never flash.
 
-## 4. What the IMU stream looks like
+## 5. What the IMU stream looks like
 
 **What to check.** How `UBX-ESF-RAW`, the message that carries the F9R's raw IMU samples, frames
 them, and at what rate it comes.
@@ -366,8 +375,8 @@ the Allan variance's shortest averaging time and the size of a bag. The time tag
 [#10](../../reference/open-questions/index.md#blocking-m2) must map to GNSS time, so how it
 counts matters to the stamping rule.
 
-**How it is done.** The OpenLog's SD card held four logs, `LOG00001.TXT` to `LOG00004.TXT`, from
-the earlier setup. Each is exactly what UART1 sent, byte for byte, with no timestamps of the
+**How it is done.** The OpenLog's SD card holds the four logs from
+[check 1](#1-getting-data-out-of-the-pins), `LOG00001.TXT` to `LOG00004.TXT`. Each is exactly what UART1 sent, byte for byte, with no timestamps of the
 OpenLog's own. When they were recorded and for how long is not known, and the GPS antenna was most
 likely not connected for any of them.
 
