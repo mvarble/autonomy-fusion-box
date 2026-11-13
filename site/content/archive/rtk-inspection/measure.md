@@ -524,7 +524,7 @@ What each step found, gathered in one place:
 
 Each of steps 4 and 5 is one run.
 The raw data is the screenshots in each step.
-The step 4 recording, `uart1.ubx`, is kept on my computer and not in the repository, and the OpenLog's file stays on its SD card.
+The step 4 recording, `uart1.ubx`, is kept on my computer and not in the repository, and step 5 parsed the OpenLog's file straight off its SD card.
 
 ## What comes next
 
