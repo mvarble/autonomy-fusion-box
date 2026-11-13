@@ -11,6 +11,8 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 	import ioref from './ioref-switch.jpg';
 	import step4 from './step4-record-parse.png';
 	import openlogConfig from './openlog-config.png';
+	import openlogAfter from './openlog-card-after.png';
+	import step5 from './step5-parse.png';
 </script>
 
 I trained as a mathematician and work as a navigation engineer.
@@ -431,21 +433,38 @@ Before the card goes into the OpenLog, it holds nothing else:
 
 As it records, the OpenLog writes its log files next to `config.txt`, numbered `LOG00001.TXT`, `LOG00002.TXT` and so on.
 
-Power the board, let it record, then take the card out and parse its file with the same script:
+Power the board, let it record, then take the card out, mount it on the computer and parse the new file with the same script:
 
 ```sh
-pixi run python tools/ubx-parse.py LOG00001.TXT --last 2
+pixi run python tools/ubx-parse.py /mnt/sdcard/LOG00004.TXT --last 2
 ```
 
-> [!TODO]
-> Run it on one of the card's logs, and paste the output or a screenshot here.
+**What to look for.** A new log file beside `config.txt`, and the same message kinds as step 4 inside it.
 
-**What to look for.** The same message kinds as step 4, in larger numbers, since the logger runs for as long as it has power.
+**What came out.** After one recording, the card held one new file:
+
+<figure>
+	<img src={openlogAfter} alt="A file manager open at /mnt/sdcard/ showing two files, LOG00004.TXT and config.txt." width="602" height="331" />
+	<figcaption>The card after recording: one new log, <code>LOG00004.TXT</code>, beside <code>config.txt</code>.</figcaption>
+</figure>
+
+<figure>
+	<img src={step5} alt="A terminal running ubx-parse.py on /mnt/sdcard/LOG00004.TXT. The file is 158391 bytes; 2339 messages parsed with 2 errors: 2315 ESF-RAW and 24 GNTXT. One error reads: Message checksum b'\xfe\xff' invalid - should be b'B~'. The other: Serial stream terminated unexpectedly, 62 bytes requested, 50 bytes returned. The last two ESF-RAW messages, sTtag 4583445 and 4583702, show accel_z about +10.49 and +10.51 m/s^2, gyro_z +5.2058 and +2.4084 deg/s, and gyro_temp about 33.0 degC." width="878" height="510" />
+	<figcaption>The OpenLog's file, parsed with the script from step 4.</figcaption>
+</figure>
+
+- **The file parses.** `LOG00004.TXT` is 158 391 bytes, and holds 2 339 messages: 2 315 `ESF-RAW` and 24 `GNTXT`.
+- **There are two errors.** One is the last frame, cut short when the power went: 62 bytes requested, 50 returned.
+  The other is a checksum failure in the middle of the file, like the two in step 4: a frame that did not arrive whole.
+- **The values are plausible, and this time the board was moving.** `accel_z` reads about 10.5 m/s², and `gyro_z` reads +5.2 and then +2.4 deg/s: the board was turning about its vertical axis as the recording ended.
+- **The file is numbered 4, on a card that held only `config.txt`.** The OpenLog keeps its own count somewhere other than the card; I haven't looked into where.
 
 **What I learned.**
 - **An SD logger needs no computer, but it has no clock.** The file holds the bytes and nothing else.
   A recording through the adapter, by contrast, could stamp each read with the computer's time.
   That matters later, because some of the ledger's questions are about timing.
+- **The same parser reads both recordings.** The OpenLog adds nothing to the bytes, so its file is exactly what an adapter would have captured.
+- **Lost bytes are not the adapter's fault alone.** A frame went missing mid-stream on the OpenLog too, so whatever drops bytes is not specific to the computer or the FTDI adapter.
 - **Green carries the OpenLog's output into the receiver's `RX1`.** Whatever the OpenLog transmits reaches UART1's input, so that wire should come off if UART1 is ever wired to anything else.
 
 > [!TODO]
