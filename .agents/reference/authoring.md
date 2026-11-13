@@ -43,7 +43,7 @@ title: Allan variance
 summary: How a sensor's noise changes with the time it is averaged over. # one plain sentence
 depends_on: [archive/m2-allan/measure]
 katex_macros:
-    '\avar': '\sigma^2_A'
+  '\avar': '\sigma^2_A'
 ---
 ```
 
@@ -169,5 +169,6 @@ to the archive entry that decided it.
 A graph (a timing chain, a wiring diagram, a factor graph) is drawn with `<ModelGraph spec={name} />` from a
 `*.graph.ts` file beside the document (see `site/README.md`). Any other figure is an image or a Svelte component in the
 document's folder, referenced relatively. An image is imported in the document's `<script>`
-(`import board from './board.jpg'`) and placed with `<img src={board} alt="…" />`, so the build
-serves it under the site's base path.
+(`import board from './board.jpg'`), so the build serves it under the site's base path, and placed
+with `<ImageFigure src={board} alt="…" width={…} height={…}>caption</ImageFigure>`
+(`$lib/components/ImageFigure.svelte`), which opens it enlarged when clicked.

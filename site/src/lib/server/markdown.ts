@@ -42,7 +42,7 @@ export function markdownOf(doc: SkoroDocument): string {
         script,
         doc,
     );
-    const markdown = relinked(expandFileRefs(body, file), doc);
+    const markdown = relinked(expandFileRefs(imageFigures(body), file), doc);
     return `${frontmatter}\n# ${doc.title}\n\n${markdown}\n`;
 }
 
@@ -120,6 +120,18 @@ function imageSources(body: string, script: string, doc: SkoroDocument): string 
         const url = urls.get(name);
         return url ? `src="${url}"` : whole;
     });
+}
+
+// Replaces each `<ImageFigure src="…" alt="…" …>caption</ImageFigure>`, once `imageSources` has
+// resolved its `src`, with a Markdown image and its caption in italics.
+function imageFigures(body: string): string {
+    return body.replace(
+        /<ImageFigure\s+src="([^"]+)"\s+alt="([^"]*)"[^>]*>([\s\S]*?)<\/ImageFigure>/g,
+        (_, src: string, alt: string, caption: string) => {
+            const text = caption.trim();
+            return `![${alt}](${src})` + (text ? `\n\n*${text}*` : '');
+        },
+    );
 }
 
 // Links are written the way the files sit on disk (`../../math/retraction/`, `plan.md`). Here they

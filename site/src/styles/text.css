@@ -72,7 +72,7 @@
     }
 
     /* A photo or other image figure written in a document; code blocks and graphs style their own. */
-    figure:not(.code-block, .model-graph) {
+    figure:not(.code-block, .model-graph, .image-figure) {
         margin: var(--space-6) 0;
 
         img {
