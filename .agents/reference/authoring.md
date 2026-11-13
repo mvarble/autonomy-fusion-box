@@ -71,7 +71,9 @@ katex_macros:
 ## Prose
 
 Write in complete sentences and paragraphs, in the register of a textbook, with tables and lists
-only where they genuinely help. Never refer to the conversation that produced a document: it is
+only where they genuinely help. In `site/content/`, put each sentence on its own line and never
+wrap a long one: a paragraph is its sentences, one per line, and a list item's later sentences are
+indented to its text. Diffs then show which sentence changed. Never refer to the conversation that produced a document: it is
 read later, by someone who was not there. Prefer a concrete example to an abstract definition
 alone. Name things the way the code names them, in backticks; generics such as `Q<B, M>` must be
 in backticks anyway, since `<` and `{` are Svelte syntax outside code and math.
