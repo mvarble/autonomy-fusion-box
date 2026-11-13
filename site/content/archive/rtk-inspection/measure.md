@@ -429,7 +429,7 @@ Before the card goes into the OpenLog, it holds nothing else:
 	<figcaption>The SD card mounted on the computer before it goes into the OpenLog: <code>config.txt</code> and nothing else.</figcaption>
 </figure>
 
-Each time it powers up, the OpenLog writes a new log file next to `config.txt`: `LOG00001.TXT`, `LOG00002.TXT` and so on.
+As it records, the OpenLog writes its log files next to `config.txt`, numbered `LOG00001.TXT`, `LOG00002.TXT` and so on.
 
 Power the board, let it record, then take the card out and parse its file with the same script:
 
