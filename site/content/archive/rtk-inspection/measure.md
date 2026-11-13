@@ -4,6 +4,9 @@ summary: A first session with the ArduSimple ZED-F9R board. It reads the firmwar
 
 <script>
 	import board from './board.jpg';
+	import rails from './ardusimple-arduino-rails.jpg';
+	import timeTagging from './im-esf-meas-time-tagging.png';
+	import esfRaw from './id-esf-raw.png';
 </script>
 
 Before the box can configure the receiver, stamp its data or decode its IMU, it has to know what is
@@ -15,6 +18,9 @@ checks, each small enough for an afternoon:
 3. [what the board itself says](#3-what-the-board-says), read from its silkscreen;
 4. [what its IMU stream looks like](#4-what-the-imu-stream-looks-like), from recordings made long
    ago with an SD-card logger.
+
+Before them comes [the story](#before-this-lab-a-first-attempt-months-ago) of a first attempt
+with the same board, months earlier, which left it wired the way this lab found it.
 
 Each check follows the same pattern: what to check, why it matters and where it fits in the box,
 how it is done, what came out, and what it taught. Two ledger questions are the targets:
@@ -32,6 +38,68 @@ move between revisions:
 
 Every check that talks to the receiver here only reads from it. None changes its configuration.
 
+## Before this lab: a first attempt, months ago
+
+This board did not arrive fresh for this lab. Months earlier, before the box was an idea, I had
+tried to get GPS, IMU and INS estimates out of it, simply to log all sorts of useful data and look
+at it. I never got as far as looking. This project replaced that plan. What follows is what I did
+then, reconstructed from memory. It is the reason the board has four wires on it, and it explains
+some of what the checks below found.
+
+**Finding the documentation.** I started at the
+[product page](https://www.ardusimple.com/product/simplertk2b-fusion/) for the simpleRTK2B Fusion,
+which led to its
+[hookup guide](https://www.ardusimple.com/rtk-ins-simplertk2b-f9r-hookup-guide/). The general
+material about pins was not there. It was in the
+[guide for a sibling board](https://www.ardusimple.com/user-guide-simplertk2b-budget/), the
+simpleRTK2B Budget, which carries a ZED-F9P rather than the F9R. Its section on the
+[Arduino rails](https://www.ardusimple.com/user-guide-simplertk2b-budget/#arduino) showed which
+header pins carry which UART:
+
+<figure>
+	<img src={rails} alt="ArduSimple's user guide for the simpleRTK2B Budget, section Arduino rails: a photo of the board with the header pins highlighted, and a list. GND should always be connected. 5V_IN can power the board, with the 5V switch set to input. IOREF is an input that sets the voltage level of the next pins, from 1.2 V to 5.5 V. TX1 and RX1 are ZED-F9P UART1 TX and RX. TX2 and RX2 are the XBee UART, also connected to the ZED-F9P's UART2. Connecting your own hardware to UART1 or UART2 makes it mandatory to connect IOREF to the voltage your hardware needs." width="826" height="1011" />
+	<figcaption>The Arduino rails, from ArduSimple's guide to the simpleRTK2B Budget, a sibling board with a ZED-F9P. Screenshot of <a href="https://www.ardusimple.com/user-guide-simplertk2b-budget/#arduino">the guide</a>.</figcaption>
+</figure>
+
+That guide also pointed to u-center 2, u-blox's configuration tool. At the bottom of the hookup
+guide was u-blox's own
+[getting-started note for the ZED-F9R](https://content.u-blox.com/sites/default/files/documents/ZED-F9R-GettingStarted_AppNote_UBX-22035176.pdf),
+and from there the two documents this lab leans on. In the
+[integration manual](https://www.u-blox.com/docs/UBX-20039643), a search for "IMU" turned up the
+section on time tagging. I didn't need it then, but I could tell that time would matter:
+
+<figure>
+	<img src={timeTagging} alt="ZED-F9R Integration Manual section 3.2.5.2, UBX-ESF-MEAS time tagging. The epoch of sensor data can be taken from the reception time of the message's first byte or from a time mark on an external input. Latency is configurable per sensor. Time tags for all UBX-ESF-MEAS data must have the same resolution, and the receiver generates ESF-MEAS from its internal IMU with a default time tag resolution of 1 millisecond." width="847" height="422" />
+	<figcaption>Integration manual §3.2.5.2, on time-tagging sensor data. Screenshot of <a href="https://www.u-blox.com/docs/UBX-20039643">the manual</a>.</figcaption>
+</figure>
+
+The [interface description](https://www.u-blox.com/docs/UBX-22010984) showed how much of the
+receiver lives in UBX messages, each with a class, an ID and a fixed layout, like `ESF-RAW`:
+
+<figure>
+	<img src={esfRaw} alt="u-blox interface description section 3.11.4, UBX-ESF-RAW (0x10 0x03), raw sensor measurements. Output message, length 4 + n times 8 bytes. Payload: a 4-byte reserved0 field, then a repeated group of a 4-byte data field, whose bits 23 to 0 are dataField and bits 31 to 24 dataType, and a 4-byte sTtag, the sensor time tag." width="862" height="490" />
+	<figcaption>Interface description §3.11.4, <code>UBX-ESF-RAW</code>. Screenshot of <a href="https://www.u-blox.com/docs/UBX-22010984">the interface description</a>.</figcaption>
+</figure>
+
+**Configuring and logging.** I ran u-center 2 on Windows and configured the receiver to send the
+messages I wanted to parse and interpret out of UART1. To check that something came out, I
+connected the UART1 pins to an FTDI USB-serial adapter and watched the bytes arrive in picocom on
+Linux. Then I swapped the adapter for a SparkFun OpenLog, which wrote UART1 to an SD card.
+
+**In hindsight**, each step of that attempt matches something the checks below came back to:
+
+- **The FTDI adapter** is the other kind of USB serial port, a bridge chip on `/dev/ttyUSB*`.
+  [Check 1](#1-how-the-receiver-appears-over-usb) contrasts it with the F9R's own USB.
+- **Configuring UART1 rather than USB** is why USB carries only NMEA today, in
+  [check 2](#2-which-firmware-the-receiver-runs).
+- **The Budget guide is for a different board.** [Check 3](#3-what-the-board-says) reads this
+  board's own silkscreen. Its rule about IOREF matters: that pin sets the UART's voltage level, so
+  it has to match whatever is connected, and the Pi's GPIOs are not 5 V tolerant `[RPI-HW]`.
+- **The time-tagging section** describes `ESF-MEAS`, whose time tags have a 1 ms resolution.
+  [Check 4](#4-what-the-imu-stream-looks-like) shows that this does not carry over to
+  `ESF-RAW`.
+- **The OpenLog's files** are what check 4 decodes.
+
 ## The setup
 
 <figure>
@@ -40,9 +108,8 @@ Every check that talks to the receiver here only reads from it. None changes its
 </figure>
 
 The board sits in a 3D-printed enclosure and is powered over USB. The four coloured wires are left
-over from an earlier attempt to get GPS, IMU and INS estimates out of it, configured in u-center 2
-long ago. They run to a SparkFun OpenLog, a small board that writes whatever arrives on its serial
-input to a file on an SD card. They were left in place for this lab.
+over from [the first attempt](#before-this-lab-a-first-attempt-months-ago). They run to the
+SparkFun OpenLog, and they were left in place for this lab.
 
 The host is a laptop running Arch Linux, kernel 7.2.14-arch1-1. The scripts run from the Pixi
 environment at the repository root: Python 3.15.2, pyubx2 1.4.1 and pyserial 3.5. A Windows
@@ -825,6 +892,9 @@ ESF-RAW values (scaled):
   `VALSET`, in RAM only.
 - **The stored configuration (#9).** `VALGET` each layer (RAM, BBR, flash, default) for the port,
   protocol and message-rate keys, and record what the board holds before the box changes it.
+- **The IOREF switch, before the Pi is wired.** The photo shows the switch but not reliably which
+  way it is set. On the Budget board, IOREF sets the UART voltage level. Confirm this board's
+  setting gives 3.3 V on the pins the Pi will use, with the AD3, before connecting a GPIO.
 - **The dropped messages (#33).** Record `UBX-MON-COMMS` alongside `ESF-RAW` and see whether the
   drops follow the transmit buffer.
 
