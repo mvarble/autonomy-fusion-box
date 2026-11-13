@@ -7,6 +7,7 @@ summary: A first session with the ArduSimple ZED-F9R board. It reads the firmwar
 	import rails from './ardusimple-arduino-rails.jpg';
 	import timeTagging from './im-esf-meas-time-tagging.png';
 	import esfRaw from './id-esf-raw.png';
+	import ucenter from './ucenter-uart1-recording.png';
 </script>
 
 Before the box can configure the receiver, stamp its data or decode its IMU, it has to know what is
@@ -40,11 +41,12 @@ Every check that talks to the receiver here only reads from it. None changes its
 
 ## Before this lab: a first attempt, months ago
 
-This board did not arrive fresh for this lab. Months earlier, before the box was an idea, I had
-tried to get GPS, IMU and INS estimates out of it, simply to log all sorts of useful data and look
-at it. I never got as far as looking. This project replaced that plan. What follows is what I did
-then, reconstructed from memory. It is the reason the board has four wires on it, and it explains
-some of what the checks below found.
+This board did not arrive fresh for this lab. Months earlier, before the box was an idea, I
+started by simply playing with it: finding its documentation, configuring it, and getting GPS, IMU
+and INS data out of it and onto an SD card. Along the way it struck me that aligning a camera's
+timing with a Raspberry Pi's would be a good way to learn this properly, and that idea grew into
+the fusion box. What follows is that first round of play. It is the reason the board has four
+wires on it, and it explains some of what the checks below found.
 
 **Finding the documentation.** I started at the
 [product page](https://www.ardusimple.com/product/simplertk2b-fusion/) for the simpleRTK2B Fusion,
@@ -82,9 +84,28 @@ receiver lives in UBX messages, each with a class, an ID and a fixed layout, lik
 </figure>
 
 **Configuring and logging.** I ran u-center 2 on Windows and configured the receiver to send the
-messages I wanted to parse and interpret out of UART1. To check that something came out, I
-connected the UART1 pins to an FTDI USB-serial adapter and watched the bytes arrive in picocom on
-Linux. Then I swapped the adapter for a SparkFun OpenLog, which wrote UART1 to an SD card.
+messages I wanted to parse and interpret out of UART1. I saved the configuration in u-center as
+`UART1-Recording`:
+
+<figure>
+	<img src={ucenter} alt="u-center 2's Device configuration window, Advanced configuration, with the saved configuration UART1-Recording. Key CFG-MSGOUT-UBX_ESF_RAW_UART1 is selected, value 50, with layers RAM 50, Flash 50 and Default 0 listed under it. The list of configuration changes sets each of CFG-UART1OUTPROT-UBX to 1, CFG-UART1OUTPROT-NMEA to 0, CFG-UART1-BAUDRATE to 115200, CFG-MSGOUT-UBX_ESF_RAW_UART1 to 50 and CFG-NAV2-OUT_ENABLED to 1, each in the RAM, BBR and Flash layers." width="1634" height="977" />
+	<figcaption>The configuration in u-center 2: fifteen changes, five keys each written to RAM, BBR and flash.</figcaption>
+</figure>
+
+It sets five keys, each in all three layers: RAM, BBR and flash. Their meanings are from `[ID]`
+§6.9.9 (`CFG-MSGOUT`) and §6.9.10 (`CFG-NAV2`).
+
+| key                            | value  | what it does                                  |
+| ------------------------------ | -----: | --------------------------------------------- |
+| `CFG-UART1OUTPROT-UBX`         |      1 | UBX output on UART1                           |
+| `CFG-UART1OUTPROT-NMEA`        |      0 | no NMEA output on UART1                       |
+| `CFG-UART1-BAUDRATE`           | 115200 | UART1's baud rate                             |
+| `CFG-MSGOUT-UBX_ESF_RAW_UART1` |     50 | `ESF-RAW` output on UART1                     |
+| `CFG-NAV2-OUT_ENABLED`         |      1 | the secondary, GNSS-only output (NAV2)        |
+
+To check that something came out, I connected the UART1 pins to an FTDI USB-serial adapter and
+watched the bytes arrive in picocom on Linux. Then I swapped the adapter for a SparkFun OpenLog,
+set to the same 115200 baud, which wrote UART1 to an SD card.
 
 **In hindsight**, each step of that attempt matches something the checks below came back to:
 
@@ -98,7 +119,10 @@ Linux. Then I swapped the adapter for a SparkFun OpenLog, which wrote UART1 to a
 - **The time-tagging section** describes `ESF-MEAS`, whose time tags have a 1 ms resolution.
   [Check 4](#4-what-the-imu-stream-looks-like) shows that this does not carry over to
   `ESF-RAW`.
-- **The OpenLog's files** are what check 4 decodes.
+- **Writing to flash** is why that configuration is still on the board, in
+  [check 3](#3-what-the-board-says).
+- **The OpenLog's files** are what check 4 decodes, and they hold exactly what this configuration
+  asked for.
 
 ## The setup
 
@@ -316,16 +340,19 @@ baud,escape,esc#,mode,verb,echo,ignoreRX
   and whether it is clean there, is for the AD3 to say in #2 and #3. The labels only say where to
   put the probe.
 - **UART1 is shared.** It is on J4 and on the bottom header, and as found it fed the OpenLog at
-  115200 baud. The default is 38400 `[IM §3.1.3]`, so the old configuration changed it. UART2 went
+  115200 baud. The default is 38400 `[IM §3.1.3]`; the old configuration set 115200. UART2 went
   to the empty XBee socket. That is the shape [#14](../../reference/open-questions/index.md#blocking-m2)
   asks about.
 - **Green carries the OpenLog's output into the F9R's `RX1`.** Whatever the OpenLog transmits
   arrives at the receiver's UART1 input. If UART1 goes to the Pi, that wire comes off first.
-- **The old configuration is most likely in flash.** RAM settings are lost at power-off, and BBR
-  keeps them only while a backup supply holds `[IM §3.1]`. The `BAT` footprint has nothing fitted,
-  yet UBX still comes out of UART1. A `VALGET` of each layer would settle it, which is
-  [#9](../../reference/open-questions/index.md#blocking-m1). Before the box changes anything, those
-  stored layers should be read back and recorded, so that what the board held before is known.
+- **The old configuration is in flash.** RAM settings are lost at power-off, and BBR keeps them
+  only while a backup supply holds `[IM §3.1]`. The `BAT` footprint has nothing fitted. The
+  u-center configuration wrote every key to flash as well, which is why UBX still comes out of
+  UART1. In the screenshot, u-center lists `CFG-MSGOUT-UBX_ESF_RAW_UART1` in the RAM and flash
+  layers but not in BBR. That fits a board with no backup supply, but whether BBR survives a power
+  cycle is still [#9](../../reference/open-questions/index.md#blocking-m1)'s to measure. Before the
+  box changes anything, a `VALGET` of each layer should record what the board holds. The box itself
+  writes only RAM and BBR, never flash.
 
 ## 4. What the IMU stream looks like
 
@@ -668,7 +695,9 @@ if __name__ == "__main__":
   `ESF-RAW` that starts `b5 62 10 03 3c 00`.
 - **Every `GNTXT` sentence** reads `$GNTXT,01,01,00,txbuf alloc S*12`. Neither document explains
   that text.
-- **No other message** is in any log.
+- **No other message** is in any log. That matches the configuration, which put only `ESF-RAW`
+  on UART1 and turned NMEA output off there. The `GNTXT` sentences are NMEA all the same, so
+  something other than `CFG-UART1OUTPROT-NMEA` lets them through. I haven't found what.
 
 *Framing.* All 906 537 `ESF-RAW` messages have the same seven samples, in the same order:
 
