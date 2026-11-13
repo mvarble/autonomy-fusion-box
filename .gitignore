@@ -12,3 +12,6 @@
 /firmware/*/build/
 __pycache__/
 .venv/
+# pixi environments
+.pixi/*
+!.pixi/config.toml
