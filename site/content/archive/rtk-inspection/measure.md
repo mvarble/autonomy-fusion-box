@@ -44,9 +44,10 @@ It runs from the Pixi environment at the repository root (`pixi run get-firmware
 the reader skip the NMEA sentences that stream on the same port, so the reply is not lost among
 them.
 
-The board came up as `/dev/ttyACM0` (`pixi run get-firmware /dev/ttyACM0`). The kernel log from
-when it was plugged in shows the F9R's own USB, handled by the generic CDC-ACM driver, with no
-USB-serial bridge chip in between:
+The board has two USB-C connectors. The cable went to the one labelled **POWER + GPS**, next to the
+antenna connector. The board came up as `/dev/ttyACM0` (`pixi run get-firmware /dev/ttyACM0`). The
+kernel log from when it was plugged in shows that this connector is the F9R's own USB, handled by
+the generic CDC-ACM driver, with no USB-serial bridge chip in between:
 
 ```text
 usb 1-1.1.3: New USB device found, idVendor=1546, idProduct=01a9, bcdDevice= 1.00
@@ -59,7 +60,7 @@ udev reports the interfaces as `:020201:0a00ff:`: a communications interface wit
 group `uucp`, so the user running the script needs to be in that group.
 
 > [!TODO]
-> Which connector on the board the cable went to, and how many times the script was run.
+> How many times the script was run.
 
 **Along the way, picocom.** Opening the same port in picocom showed NMEA sentences flowing on USB
 and no visible UBX. That is the board's stored configuration rather than a fault: I had earlier
