@@ -9,6 +9,7 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 	import ucenter from './ucenter-uart1-recording.png';
 	import picocom from './ftdi-picocom.png';
 	import ioref from './ioref-switch.jpg';
+	import step4 from './step4-record-parse.png';
 </script>
 
 I trained as a mathematician and work as a navigation engineer.
@@ -367,19 +368,37 @@ pixi run python tools/ubx-parse.py uart1.ubx --last 2
 
 Close picocom first: only one program at a time can hold the port.
 
-> [!TODO]
-> Run both, and paste the output or a screenshot here.
-
 **What to look for.**
 - **`ESF-RAW` counted in the hundreds**, which means the bytes parse.
 - **A few `GNTXT` lines.** They are NMEA text messages, sent even with NMEA output off.
-- **At most one error.** The recording stops wherever Ctrl+C or `--seconds` lands, usually partway through a frame, and the parser reports that last frame as cut short.
-- **The last messages' values should be plausible.** With the board lying flat, `accel_z` should be close to gravity, the gyro rates close to zero, and the temperature close to the room's.
+- **Few errors.** The recording stops wherever Ctrl+C or `--seconds` lands, usually partway through a frame, so one cut-short frame at the end is expected.
+- **Plausible values in the last messages.** With the board lying flat, `accel_z` should be near gravity and the gyro rates near zero.
+
+**What came out.** One ten-second run:
+
+<figure>
+	<img src={step4} alt="A terminal. ubx-record.py records /dev/ttyUSB0 at 115200 baud into uart1.ubx for 10 seconds, printing a count each second from 6647 bytes at 1.0 s to 65883 bytes at 10.0 s, about 6,600 to 6,700 bytes a second, and writes 65883 bytes. ubx-parse.py then reports uart1.ubx at 65883 bytes, 969 messages parsed with 3 errors: 959 ESF-RAW and 10 GNTXT. Two errors read: Message checksum b'<\x00' invalid - should be b'k*'. One reads: Serial stream terminated unexpectedly, 62 bytes requested, 36 bytes returned. The last two ESF-RAW messages, sTtag 7608858 and 7609115, show accel_z +10.4746 m/s^2, gyro rates within about half a degree per second of zero, and gyro_temp about 33.2 degC." width="820" height="671" />
+	<figcaption>Step 4 on the bench: ten seconds of UART1 recorded through the FTDI adapter, then parsed.</figcaption>
+</figure>
+
+- **The bytes parse.** In 10.0 s the recorder wrote 65 883 bytes, between 6 586 and 6 728 a second.
+  The parser found 969 messages in them: 959 `ESF-RAW` and 10 `GNTXT`.
+- **There were three errors, not one.** One is the expected cut-short frame at the end: 62 bytes requested, 36 returned.
+  The other two are checksum failures, and the bytes the parser read as each checksum, `3c 00`, are how every `ESF-RAW` frame's length field begins.
+  So in those two places the next frame started before the current one had ended: bytes went missing in the middle of the stream.
+  This run doesn't say where they were lost, in the receiver, on the wire or in the computer.
+- **The values are plausible.** The last two messages read `accel_z` = +10.4746 m/s², the gyro rates within half a degree per second of zero, and a gyro temperature of about 33 °C, with consecutive time tags 7 608 858 and 7 609 115.
 
 **What I learned.**
+- **The whole chain works.** Configuration, wiring, baud rate and parser all agree, because hundreds of messages decode cleanly.
+- **The line is about half full.** About 6 600 bytes a second, against the 11 520 that 115200 baud can carry.
+- **A parser's error count is information.** A checksum failure here doesn't mean the parser is wrong.
+  It means bytes were lost, and a recorder that keeps the box's data has to notice that, not skip past it.
+- **Raw IMU values are raw.** `accel_z` reads about 10.47 m/s², where gravity alone would give about 9.8.
+  `ESF-RAW` carries the sensor's output before any calibration, and the gyro runs warm, at about 33 °C.
 
 > [!TODO]
-> In your own words: what the output told you, and what surprised you.
+> Correct these in your own words, and add what surprised you.
 
 ## 5. Recording with the OpenLog
 
