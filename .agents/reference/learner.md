@@ -36,6 +36,8 @@ New to them, or not yet familiar:
 
 - **USB serial on Linux.** They didn't know what CDC-ACM is, why the receiver appears as
   `/dev/ttyACM*`, or how that differs from a bridge chip on `/dev/ttyUSB*`.
+- **UART basics.** At the start they didn't know what a baud rate was or which settings a UART has,
+  and chose u-center 2's GUI to discover them rather than reading the protocol first.
 - **Serial terminals.** They remembered picocom only by its unusual exit key, and asked how it
   relates to serial ports at all.
 - **Per-port configuration.** They had set it per port themselves, but months later expected UBX
