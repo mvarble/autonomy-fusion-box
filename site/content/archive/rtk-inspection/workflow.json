@@ -1,13 +1,25 @@
 {
     "kind": "probe",
-    "stage": "measure",
+    "stage": "publish",
     "started": "2026-11-13",
     "events": [
         {
             "date": "2026-11-13",
             "action": "start",
             "stage": "measure"
+        },
+        {
+            "date": "2026-11-13",
+            "action": "approve",
+            "stage": "measure",
+            "commit": "9701ad9"
         }
     ],
-    "approvals": {}
+    "approvals": {
+        "measure": {
+            "date": "2026-11-13",
+            "commit": "9701ad9",
+            "hash": "b05d930fc750b620bfd76069c37699042a8b648785952cd50cb665eb02ac28ed"
+        }
+    }
 }
