@@ -105,8 +105,8 @@ udev reports the interfaces as `:020201:0a00ff:`: a communications interface wit
 `/dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_GNSS_receiver-if00`. The node is owned by
 group `uucp`, so the user running the script needs to be in that group.
 
-> [!TODO]
-> How many times the script was run.
+I ran the script many times without keeping count. The reply quoted under Results is from one of
+those runs.
 
 **Along the way, picocom.** Opening the same port in picocom showed NMEA sentences flowing on USB
 and no visible UBX. That is the board's stored configuration rather than a fault: I had earlier
