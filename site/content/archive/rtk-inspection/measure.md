@@ -454,7 +454,7 @@ pixi run python tools/ubx-parse.py /mnt/sdcard/LOG00004.TXT --last 2
 </figure>
 
 - **The file parses.** `LOG00004.TXT` is 158 391 bytes, and holds 2 339 messages: 2 315 `ESF-RAW` and 24 `GNTXT`.
-- **There are two errors.** One is the last frame, cut short when the power went: 62 bytes requested, 50 returned.
+- **There are two errors.** One is the last frame, cut short where the recording ended: 62 bytes requested, 50 returned.
   The other is a checksum failure in the middle of the file, like the two in step 4: a frame that did not arrive whole.
 - **The values are plausible, and this time the board was moving.** `accel_z` reads about 10.5 m/s², and `gyro_z` reads +5.2 and then +2.4 deg/s: the board was turning about its vertical axis as the recording ended.
 - **The file is numbered 4, on a card that held only `config.txt`.** The OpenLog keeps its own count somewhere other than the card; I haven't looked into where.
