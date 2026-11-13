@@ -1,5 +1,5 @@
 ---
-summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working through the ledger's open questions. It finds the documentation, configures UART1 to send the IMU's raw samples, checks the bytes through an FTDI adapter, then records and parses them, first through the adapter and then with an SD-card logger.
+summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working through the ledger's open questions. It finds the documentation, configures UART1 to send the IMU's raw samples, checks the bytes through an FTDI adapter, then records and parses them, first through the adapter and then with an SD-card logger, and finally looks at the signal itself on an oscilloscope and logic analyzer.
 ---
 
 <script>
@@ -13,6 +13,9 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 	import openlogConfig from './openlog-config.png';
 	import openlogAfter from './openlog-card-after.png';
 	import step5 from './step5-parse.png';
+	import ad3Bench from './ad3-bench.jpg';
+	import ad3Scope from './ad3-scope.png';
+	import ad3Logic from './ad3-logic.png';
 </script>
 
 I trained as a mathematician and work as a navigation engineer.
@@ -21,13 +24,14 @@ This box is how I am learning the hardware side, with an AI assistant alongside.
 The [ledger](../../reference/open-questions/index.md) is full of questions about this receiver that the assistant raised, and answering them will mean polling messages, reading bytes and wiring pins.
 Before that, I wanted a feel for the basics with my own hands: get data out of the board, into a file, and parsed.
 
-This lab does that in five steps, each building on the last:
+This lab does that in six steps, each building on the last:
 
 1. [find the documentation](#1-finding-the-documentation);
 2. [configure UART1 in u-center 2](#2-configuring-uart1-in-u-center-2) to send the messages I care about;
 3. [check that bytes flow](#3-checking-that-bytes-flow), through an FTDI USB-serial adapter;
 4. [record the bytes to a file and parse it](#4-recording-a-file-and-parsing-it);
-5. [swap in an SD-card logger and parse its file](#5-recording-with-the-openlog).
+5. [swap in an SD-card logger and parse its file](#5-recording-with-the-openlog);
+6. [look at the signal itself](#6-looking-at-the-wire), on an oscilloscope and a logic analyzer.
 
 Each step says what it is for, how it is done, what to look for, and what it taught.
 It answers no ledger question by itself.
@@ -169,7 +173,7 @@ As the labels read, the two positions do this:
   That matches the sibling board's guide from step 1, which says IOREF must then be connected to the voltage the other hardware needs.
 
 For a 3.3 V adapter, and later for the Pi, the first position is the one to want.
-Confirm it with a meter on the `IOREF` pin before connecting anything.
+Confirm it with a meter on the `IOREF` pin before connecting anything, or, as [step 6](#6-looking-at-the-wire) does, read the level off an oscilloscope.
 
 On this board the switch is set to `IOREF = 3V3, 5V = OUTPUT`: the UART pins run at 3.3 V, and the board's `5V` pin supplies 5 V.
 That is the pin the OpenLog draws its power from in step 5.
@@ -463,6 +467,58 @@ pixi run python tools/ubx-parse.py /mnt/sdcard/LOG00004.TXT --last 2
 - **The same parser reads both recordings.** The OpenLog adds nothing to the bytes, so its file is exactly what an adapter would have captured.
 - **Lost bytes are not the adapter's fault alone.** A frame went missing mid-stream on the OpenLog too, so whatever drops bytes is not specific to the computer or the FTDI adapter.
 - **Green carries the OpenLog's output into the receiver's `RX1`.** Whatever the OpenLog transmits reaches UART1's input, so that wire should come off if UART1 is ever wired to anything else.
+
+## 6. Looking at the wire
+
+**What it is for.** Every step so far trusted a tool to turn the signal into bytes.
+This one looks at the signal itself, with Digilent's Analog Discovery 3: a USB oscilloscope and logic analyzer in one box, driven by its WaveForms software.
+It is mostly for fun, but it also shows what a UART byte physically is, and it reads the voltage that step 3 said to check.
+
+**How it is done.** Connect the Analog Discovery 3 alongside whatever else is on UART1.
+Its inputs only listen, so they can share the pin:
+
+- oscilloscope channel 1+ to `TX1`, and channel 1− to `GND`;
+- digital input `DIO 0` to `TX1`, with one of its ground wires to `GND`;
+- nothing to the instrument's power or signal outputs, so it never drives the line.
+
+<figure>
+	<img src={ad3Bench} alt="The ArduSimple board, powered and lit, in its open enclosure beside a Digilent Analog Discovery 3, a square black box with a green rim. The instrument's ribbon of flywires fans out across the desk, and a few of its wires are joined to the board's wires that leave through the hole in the enclosure wall." width="1200" height="1600" />
+	<figcaption>The Analog Discovery 3 tapped onto the board's UART1 wires.</figcaption>
+</figure>
+
+In WaveForms, the *Scope* tool shows channel 1, triggered on an edge, at 1 V a division and 50 µs a division.
+The *Logic* tool shows `DIO 0` with a UART decoder added on it.
+
+**What to look for.**
+- **On the scope:** a line that rests high between bytes and drops to 0 V for each start bit, and a high level near 3.3 V, since IOREF is set to 3.3 V.
+  At 115200 baud one bit lasts 1/115200 s, about 8.7 µs, so a byte of 10 bits takes about 87 µs.
+- **On the logic analyzer:** each byte broken into its start bit, eight data bits and stop bit, and decoded.
+
+**What came out.**
+
+<figure>
+	<img src={ad3Scope} alt="WaveForms Scope tool, channel 1 at 1 V per division with a 1.6 V offset, 50 microseconds per division, 32768 samples at 25 MHz. The trace is a square wave switching between about 0 V and about 3.2 V, with long high stretches and runs of short pulses. A cursor reads C1: 3.154 V on a high stretch." width="1892" height="849" />
+	<figcaption>UART1 on the scope: the line switches between 0 V and about 3.15 V.</figcaption>
+</figure>
+
+<figure>
+	<img src={ad3Logic} alt="WaveForms Logic tool, DIO 0 sampled at 25 MHz with a 1.4 V threshold, 50 microseconds per division. A UART row above the data trace decodes each byte, shown as characters: J, ù, ÿ, CR, RS, ô, ^. Under each, the data trace is marked S for the start bit, 0 to 7 for the data bits, and P at the end of each byte." width="1888" height="402" />
+	<figcaption>The same line on the logic analyzer, with each byte split into its bits and decoded.</figcaption>
+</figure>
+
+- **The high level is 3.154 V**, read with a cursor on the scope.
+  That is the IOREF switch's 3.3 V setting, seen on the wire, and well clear of 5 V.
+- **The decoder finds bytes.** Each one is marked `S` for its start bit, `0` to `7` for its data bits and `P` at its end, and decoded without errors.
+- **The bytes are shown as text, which UBX isn't.** `J`, `ù`, `ÿ`, `CR`, `RS`, `ô` and `^` are just how those byte values look as characters.
+  `ÿ` is `0xFF`, a byte that turns up often in the negative numbers inside `ESF-RAW`.
+  Switching the decoder to show hexadecimal would show the bytes as the parser sees them.
+
+**What I learned.**
+- **A UART byte is a little picture on the wire.** The line idles high, a start bit pulls it low, eight data bits follow, least significant first, and a stop bit returns it high.
+  Everything in steps 3 to 5 was a tool reading those pictures.
+- **A scope answers "what voltage?" without a meter.** The cursor reading settled the IOREF question from step 3.
+- **The logic analyzer's threshold matters.** It reads a level above 1.4 V as a 1, which a 3.15 V signal clears easily.
+- **The Analog Discovery 3 is the instrument for what comes next.** The timepulse questions, #2 and #3, need exactly this kind of look at a signal.
 
 ## What comes next
 
