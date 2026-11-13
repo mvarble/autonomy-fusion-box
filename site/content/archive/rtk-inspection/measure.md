@@ -10,6 +10,7 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 	import picocom from './ftdi-picocom.png';
 	import ioref from './ioref-switch.jpg';
 	import step4 from './step4-record-parse.png';
+	import openlogConfig from './openlog-config.png';
 </script>
 
 I trained as a mathematician and work as a navigation engineer.
@@ -412,12 +413,23 @@ I had a SparkFun OpenLog sitting around, so it was the natural next step: a logg
 - red to 5 V, from the top header's `5V IN/OUT` pin, to power it;
 - blue to `GND`.
 
-Set the OpenLog to the same baud rate, in the `config.txt` on its card:
+Set the OpenLog to the same baud rate, in the `config.txt` on its card.
+The file is two lines: the settings, comma-separated, and below them the name of each.
+The first, `baud`, is the one that matters here, and it has to match `CFG-UART1-BAUDRATE`:
 
 ```text
 115200,26,3,0,1,1,0
 baud,escape,esc#,mode,verb,echo,ignoreRX
 ```
+
+Before the card goes into the OpenLog, it holds nothing else:
+
+<figure>
+	<img src={openlogConfig} alt="Left, a terminal running cat /mnt/sdcard/config.txt, which prints two lines: 115200,26,3,0,1,1,0 and baud,escape,esc#,mode,verb,echo,ignoreRX. Right, a file manager open at /mnt/sdcard/ showing a single file, config.txt." width="1129" height="264" />
+	<figcaption>The SD card mounted on the computer before it goes into the OpenLog: <code>config.txt</code> and nothing else.</figcaption>
+</figure>
+
+Each time it powers up, the OpenLog writes a new log file next to `config.txt`: `LOG00001.TXT`, `LOG00002.TXT` and so on.
 
 Power the board, let it record, then take the card out and parse its file with the same script:
 
