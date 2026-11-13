@@ -2,7 +2,7 @@
 name: wf-measure
 description: Write or revise the measurements of the active milestone or probe, what was measured, how, and what came out, in the box's development workflow. Use only when the user invokes /wf-measure.
 disable-model-invocation: true
-argument-hint: "[results to record, or what to change]"
+argument-hint: '[results to record, or what to change]'
 ---
 
 # /wf-measure: the measurements
