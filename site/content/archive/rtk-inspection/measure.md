@@ -3,6 +3,7 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 ---
 
 <script>
+	import ImageFigure from '$lib/components/ImageFigure.svelte';
 	import board from './board.jpg';
 	import rails from './ardusimple-arduino-rails.jpg';
 	import esfRaw from './id-esf-raw.png';
@@ -39,10 +40,9 @@ It answers no ledger question by itself.
 
 ## The setup
 
-<figure>
-	<img src={board} alt="The ArduSimple board in an open black 3D-printed enclosure on a bench mat, wire strippers beside it. Yellow, green, blue and red wires run from the board's headers out through a rough hole melted in the enclosure wall, their stripped ends loose. The u-blox ZED-F9R module sits at the lower right, beside the gold SMA antenna connector." width="1200" height="1600" />
-	<figcaption>The board in its enclosure, with the UART1 and power wires leaving through a hole in the wall. The F9R module is at the lower right, next to the SMA antenna connector.</figcaption>
-</figure>
+<ImageFigure src={board} alt="The ArduSimple board in an open black 3D-printed enclosure on a bench mat, wire strippers beside it. Yellow, green, blue and red wires run from the board's headers out through a rough hole melted in the enclosure wall, their stripped ends loose. The u-blox ZED-F9R module sits at the lower right, beside the gold SMA antenna connector." width={1200} height={1600}>
+	The board in its enclosure, with the UART1 and power wires leaving through a hole in the wall. The F9R module is at the lower right, next to the SMA antenna connector.
+</ImageFigure>
 
 The board is ArduSimple's simpleRTK2B Fusion, which carries a u-blox ZED-F9R: a GNSS receiver with an IMU inside.
 It sits in a 3D-printed enclosure and is powered over USB.
@@ -77,10 +77,9 @@ Everything after this step leans on it.
 
 **What to look for.** On the Arduino rails, the pins a UART needs:
 
-<figure>
-	<img src={rails} alt="ArduSimple's user guide for the simpleRTK2B Budget, section Arduino rails: a photo of the board with the header pins highlighted, and a list. GND should always be connected. 5V_IN can power the board, with the 5V switch set to input. IOREF is an input that sets the voltage level of the next pins, from 1.2 V to 5.5 V. TX1 and RX1 are ZED-F9P UART1 TX and RX. TX2 and RX2 are the XBee UART, also connected to the ZED-F9P's UART2. Connecting your own hardware to UART1 or UART2 makes it mandatory to connect IOREF to the voltage your hardware needs." width="826" height="1011" />
-	<figcaption>The Arduino rails, from ArduSimple's guide to the simpleRTK2B Budget, a sibling board with a ZED-F9P. Screenshot of <a href="https://www.ardusimple.com/user-guide-simplertk2b-budget/#arduino">the guide</a>.</figcaption>
-</figure>
+<ImageFigure src={rails} alt="ArduSimple's user guide for the simpleRTK2B Budget, section Arduino rails: a photo of the board with the header pins highlighted, and a list. GND should always be connected. 5V_IN can power the board, with the 5V switch set to input. IOREF is an input that sets the voltage level of the next pins, from 1.2 V to 5.5 V. TX1 and RX1 are ZED-F9P UART1 TX and RX. TX2 and RX2 are the XBee UART, also connected to the ZED-F9P's UART2. Connecting your own hardware to UART1 or UART2 makes it mandatory to connect IOREF to the voltage your hardware needs." width={826} height={1011}>
+	The Arduino rails, from ArduSimple's guide to the simpleRTK2B Budget, a sibling board with a ZED-F9P. Screenshot of <a href="https://www.ardusimple.com/user-guide-simplertk2b-budget/#arduino">the guide</a>.
+</ImageFigure>
 
 - `TX1` is the receiver's UART1 output, which is the pin to listen on.
 - `GND` must always be shared with whatever is connected.
@@ -89,10 +88,9 @@ Everything after this step leans on it.
 The interface description shows how much of the receiver lives in UBX messages.
 Each has a class, an ID and a fixed layout, like `ESF-RAW`, which carries the IMU's raw samples:
 
-<figure>
-	<img src={esfRaw} alt="u-blox interface description section 3.11.4, UBX-ESF-RAW (0x10 0x03), raw sensor measurements. Output message, length 4 + n times 8 bytes. Payload: a 4-byte reserved0 field, then a repeated group of a 4-byte data field, whose bits 23 to 0 are dataField and bits 31 to 24 dataType, and a 4-byte sTtag, the sensor time tag." width="862" height="490" />
-	<figcaption>Interface description §3.11.4, <code>UBX-ESF-RAW</code>. Screenshot of <a href="https://www.u-blox.com/docs/UBX-22010984">the interface description</a>.</figcaption>
-</figure>
+<ImageFigure src={esfRaw} alt="u-blox interface description section 3.11.4, UBX-ESF-RAW (0x10 0x03), raw sensor measurements. Output message, length 4 + n times 8 bytes. Payload: a 4-byte reserved0 field, then a repeated group of a 4-byte data field, whose bits 23 to 0 are dataField and bits 31 to 24 dataType, and a 4-byte sTtag, the sensor time tag." width={862} height={490}>
+	Interface description §3.11.4, <code>UBX-ESF-RAW</code>. Screenshot of <a href="https://www.u-blox.com/docs/UBX-22010984">the interface description</a>.
+</ImageFigure>
 
 **What I learned.**
 - **The documents come in layers.** The board maker documents the board, and the chip maker documents the chip.
@@ -116,10 +114,9 @@ UBX is enabled on it, but no UBX message is switched on (integration manual §3.
 Then, under *Device configuration*, *Advanced configuration*, set keys by name and save them as a named configuration.
 I wanted the IMU's raw samples, `ESF-RAW`, and kept the configuration as `UART1-Recording`:
 
-<figure>
-	<img src={ucenter} alt="u-center 2's Device configuration window, Advanced configuration, with the saved configuration UART1-Recording. Key CFG-MSGOUT-UBX_ESF_RAW_UART1 is selected, value 50, with layers RAM 50, Flash 50 and Default 0 listed under it. The list of configuration changes sets each of CFG-UART1OUTPROT-UBX to 1, CFG-UART1OUTPROT-NMEA to 0, CFG-UART1-BAUDRATE to 115200, CFG-MSGOUT-UBX_ESF_RAW_UART1 to 50 and CFG-NAV2-OUT_ENABLED to 1, each in the RAM, BBR and Flash layers." width="1634" height="977" />
-	<figcaption>The configuration in u-center 2: fifteen changes, five keys each written to RAM, BBR and flash.</figcaption>
-</figure>
+<ImageFigure src={ucenter} alt="u-center 2's Device configuration window, Advanced configuration, with the saved configuration UART1-Recording. Key CFG-MSGOUT-UBX_ESF_RAW_UART1 is selected, value 50, with layers RAM 50, Flash 50 and Default 0 listed under it. The list of configuration changes sets each of CFG-UART1OUTPROT-UBX to 1, CFG-UART1OUTPROT-NMEA to 0, CFG-UART1-BAUDRATE to 115200, CFG-MSGOUT-UBX_ESF_RAW_UART1 to 50 and CFG-NAV2-OUT_ENABLED to 1, each in the RAM, BBR and Flash layers." width={1634} height={977}>
+	The configuration in u-center 2: fifteen changes, five keys each written to RAM, BBR and flash.
+</ImageFigure>
 
 It sets five keys, each in all three layers: RAM, BBR and flash.
 Their meanings are from the interface description, §6.9.9 (`CFG-MSGOUT`) and §6.9.10 (`CFG-NAV2`).
@@ -161,10 +158,9 @@ IOREF is the voltage the UART pins swing between ground and.
 A 3.3 V adapter that sees 5 V on its `RX` can be damaged, and so can a Raspberry Pi's GPIO, so this is worth checking before the first wire goes on.
 On this board a slide switch beside the F9R module sets it:
 
-<figure>
-	<img src={ioref} alt="Close-up of the board beside the ZED-F9R module. A vertical slide switch is labelled IOREF = 3V3, 5V = OUTPUT at its top end and IOREF & 5V ARE INPUTS at its bottom end. To its right, the IOREF LED (LED6) is lit blue and the NO RTK LED is lit red. Below, connector J4 is labelled PIXHAWK + POWER, with pins VIN, RX1, TX1, TPS, EVT and GND." width="1600" height="1200" />
-	<figcaption>The IOREF switch. Its two positions are labelled <code>IOREF = 3V3, 5V = OUTPUT</code> and <code>IOREF &amp; 5V ARE INPUTS</code>.</figcaption>
-</figure>
+<ImageFigure src={ioref} alt="Close-up of the board beside the ZED-F9R module. A vertical slide switch is labelled IOREF = 3V3, 5V = OUTPUT at its top end and IOREF & 5V ARE INPUTS at its bottom end. To its right, the IOREF LED (LED6) is lit blue and the NO RTK LED is lit red. Below, connector J4 is labelled PIXHAWK + POWER, with pins VIN, RX1, TX1, TPS, EVT and GND." width={1600} height={1200}>
+	The IOREF switch. Its two positions are labelled <code>IOREF = 3V3, 5V = OUTPUT</code> and <code>IOREF &amp; 5V ARE INPUTS</code>.
+</ImageFigure>
 
 As the labels read, the two positions do this:
 
@@ -186,10 +182,9 @@ Open that port in picocom at UART1's baud rate:
 picocom -b 115200 /dev/ttyUSB0      # exit with Ctrl+A, then Ctrl+X
 ```
 
-<figure>
-	<img src={picocom} alt="picocom v3.1 opened on /dev/ttyUSB0 at 115200 baud, 8 data bits, no parity, 1 stop bit, no flow control, escape Ctrl+A. After 'Terminal ready', lines of mostly unprintable characters shown as diamonds, with a lowercase b and a less-than sign recurring throughout." width="452" height="751" />
-	<figcaption>UART1 through the FTDI adapter in picocom: binary UBX, shown as whatever characters happen to be printable.</figcaption>
-</figure>
+<ImageFigure src={picocom} alt="picocom v3.1 opened on /dev/ttyUSB0 at 115200 baud, 8 data bits, no parity, 1 stop bit, no flow control, escape Ctrl+A. After 'Terminal ready', lines of mostly unprintable characters shown as diamonds, with a lowercase b and a less-than sign recurring throughout." width={452} height={751}>
+	UART1 through the FTDI adapter in picocom: binary UBX, shown as whatever characters happen to be printable.
+</ImageFigure>
 
 **What to look for.** A steady stream, and it will look like garbage.
 UBX is binary, and a terminal can only show the bytes that happen to be printable.
@@ -383,10 +378,9 @@ Close picocom first: only one program at a time can hold the port.
 
 **What came out.** One ten-second run:
 
-<figure>
-	<img src={step4} alt="A terminal. ubx-record.py records /dev/ttyUSB0 at 115200 baud into uart1.ubx for 10 seconds, printing a count each second from 6647 bytes at 1.0 s to 65883 bytes at 10.0 s, about 6,600 to 6,700 bytes a second, and writes 65883 bytes. ubx-parse.py then reports uart1.ubx at 65883 bytes, 969 messages parsed with 3 errors: 959 ESF-RAW and 10 GNTXT. Two errors read: Message checksum b'<\x00' invalid - should be b'k*'. One reads: Serial stream terminated unexpectedly, 62 bytes requested, 36 bytes returned. The last two ESF-RAW messages, sTtag 7608858 and 7609115, show accel_z +10.4746 m/s^2, gyro rates within about half a degree per second of zero, and gyro_temp about 33.2 degC." width="820" height="671" />
-	<figcaption>Step 4 on the bench: ten seconds of UART1 recorded through the FTDI adapter, then parsed.</figcaption>
-</figure>
+<ImageFigure src={step4} alt="A terminal. ubx-record.py records /dev/ttyUSB0 at 115200 baud into uart1.ubx for 10 seconds, printing a count each second from 6647 bytes at 1.0 s to 65883 bytes at 10.0 s, about 6,600 to 6,700 bytes a second, and writes 65883 bytes. ubx-parse.py then reports uart1.ubx at 65883 bytes, 969 messages parsed with 3 errors: 959 ESF-RAW and 10 GNTXT. Two errors read: Message checksum b'<\x00' invalid - should be b'k*'. One reads: Serial stream terminated unexpectedly, 62 bytes requested, 36 bytes returned. The last two ESF-RAW messages, sTtag 7608858 and 7609115, show accel_z +10.4746 m/s^2, gyro rates within about half a degree per second of zero, and gyro_temp about 33.2 degC." width={820} height={671}>
+	Step 4 on the bench: ten seconds of UART1 recorded through the FTDI adapter, then parsed.
+</ImageFigure>
 
 - **The bytes parse.** In 10.0 s the recorder wrote 65 883 bytes, between 6 586 and 6 728 a second.
   The parser found 969 messages in them: 959 `ESF-RAW` and 10 `GNTXT`.
@@ -427,10 +421,9 @@ baud,escape,esc#,mode,verb,echo,ignoreRX
 
 Before the card goes into the OpenLog, it holds nothing else:
 
-<figure>
-	<img src={openlogConfig} alt="Left, a terminal running cat /mnt/sdcard/config.txt, which prints two lines: 115200,26,3,0,1,1,0 and baud,escape,esc#,mode,verb,echo,ignoreRX. Right, a file manager open at /mnt/sdcard/ showing a single file, config.txt." width="1129" height="264" />
-	<figcaption>The SD card mounted on the computer before it goes into the OpenLog: <code>config.txt</code> and nothing else.</figcaption>
-</figure>
+<ImageFigure src={openlogConfig} alt="Left, a terminal running cat /mnt/sdcard/config.txt, which prints two lines: 115200,26,3,0,1,1,0 and baud,escape,esc#,mode,verb,echo,ignoreRX. Right, a file manager open at /mnt/sdcard/ showing a single file, config.txt." width={1129} height={264}>
+	The SD card mounted on the computer before it goes into the OpenLog: <code>config.txt</code> and nothing else.
+</ImageFigure>
 
 As it records, the OpenLog writes its log files next to `config.txt`, numbered `LOG00001.TXT`, `LOG00002.TXT` and so on.
 
@@ -444,15 +437,13 @@ pixi run python tools/ubx-parse.py /mnt/sdcard/LOG00004.TXT --last 2
 
 **What came out.** After one recording, the card held one new file:
 
-<figure>
-	<img src={openlogAfter} alt="A file manager open at /mnt/sdcard/ showing two files, LOG00004.TXT and config.txt." width="602" height="331" />
-	<figcaption>The card after recording: one new log, <code>LOG00004.TXT</code>, beside <code>config.txt</code>.</figcaption>
-</figure>
+<ImageFigure src={openlogAfter} alt="A file manager open at /mnt/sdcard/ showing two files, LOG00004.TXT and config.txt." width={602} height={331}>
+	The card after recording: one new log, <code>LOG00004.TXT</code>, beside <code>config.txt</code>.
+</ImageFigure>
 
-<figure>
-	<img src={step5} alt="A terminal running ubx-parse.py on /mnt/sdcard/LOG00004.TXT. The file is 158391 bytes; 2339 messages parsed with 2 errors: 2315 ESF-RAW and 24 GNTXT. One error reads: Message checksum b'\xfe\xff' invalid - should be b'B~'. The other: Serial stream terminated unexpectedly, 62 bytes requested, 50 bytes returned. The last two ESF-RAW messages, sTtag 4583445 and 4583702, show accel_z about +10.49 and +10.51 m/s^2, gyro_z +5.2058 and +2.4084 deg/s, and gyro_temp about 33.0 degC." width="878" height="510" />
-	<figcaption>The OpenLog's file, parsed with the script from step 4.</figcaption>
-</figure>
+<ImageFigure src={step5} alt="A terminal running ubx-parse.py on /mnt/sdcard/LOG00004.TXT. The file is 158391 bytes; 2339 messages parsed with 2 errors: 2315 ESF-RAW and 24 GNTXT. One error reads: Message checksum b'\xfe\xff' invalid - should be b'B~'. The other: Serial stream terminated unexpectedly, 62 bytes requested, 50 bytes returned. The last two ESF-RAW messages, sTtag 4583445 and 4583702, show accel_z about +10.49 and +10.51 m/s^2, gyro_z +5.2058 and +2.4084 deg/s, and gyro_temp about 33.0 degC." width={878} height={510}>
+	The OpenLog's file, parsed with the script from step 4.
+</ImageFigure>
 
 - **The file parses.** `LOG00004.TXT` is 158 391 bytes, and holds 2 339 messages: 2 315 `ESF-RAW` and 24 `GNTXT`.
 - **There are two errors.** One is the last frame, cut short where the recording ended: 62 bytes requested, 50 returned.
@@ -481,10 +472,9 @@ Its inputs only listen, so they can share the pin:
 - digital input `DIO 0` to `TX1`, with one of its ground wires to `GND`;
 - nothing to the instrument's power or signal outputs, so it never drives the line.
 
-<figure>
-	<img src={ad3Bench} alt="The ArduSimple board, powered and lit, in its open enclosure beside a Digilent Analog Discovery 3, a square black box with a green rim. The instrument's ribbon of flywires fans out across the desk, and a few of its wires are joined to the board's wires that leave through the hole in the enclosure wall." width="1200" height="1600" />
-	<figcaption>The Analog Discovery 3 tapped onto the board's UART1 wires.</figcaption>
-</figure>
+<ImageFigure src={ad3Bench} alt="The ArduSimple board, powered and lit, in its open enclosure beside a Digilent Analog Discovery 3, a square black box with a green rim. The instrument's ribbon of flywires fans out across the desk, and a few of its wires are joined to the board's wires that leave through the hole in the enclosure wall." width={1200} height={1600}>
+	The Analog Discovery 3 tapped onto the board's UART1 wires.
+</ImageFigure>
 
 In WaveForms, the *Scope* tool shows channel 1, triggered on an edge, at 1 V a division and 50 µs a division.
 The *Logic* tool shows `DIO 0` with a UART decoder added on it.
@@ -496,15 +486,13 @@ The *Logic* tool shows `DIO 0` with a UART decoder added on it.
 
 **What came out.**
 
-<figure>
-	<img src={ad3Scope} alt="WaveForms Scope tool, channel 1 at 1 V per division with a 1.6 V offset, 50 microseconds per division, 32768 samples at 25 MHz. The trace is a square wave switching between about 0 V and about 3.2 V, with long high stretches and runs of short pulses. A cursor reads C1: 3.154 V on a high stretch." width="1892" height="849" />
-	<figcaption>UART1 on the scope: the line switches between 0 V and about 3.15 V.</figcaption>
-</figure>
+<ImageFigure src={ad3Scope} alt="WaveForms Scope tool, channel 1 at 1 V per division with a 1.6 V offset, 50 microseconds per division, 32768 samples at 25 MHz. The trace is a square wave switching between about 0 V and about 3.2 V, with long high stretches and runs of short pulses. A cursor reads C1: 3.154 V on a high stretch." width={1892} height={849}>
+	UART1 on the scope: the line switches between 0 V and about 3.15 V.
+</ImageFigure>
 
-<figure>
-	<img src={ad3Logic} alt="WaveForms Logic tool, DIO 0 sampled at 25 MHz with a 1.4 V threshold, 50 microseconds per division. A UART row above the data trace decodes each byte, shown as characters: J, ù, ÿ, CR, RS, ô, ^. Under each, the data trace is marked S for the start bit, 0 to 7 for the data bits, and P at the end of each byte." width="1888" height="402" />
-	<figcaption>The same line on the logic analyzer, with each byte split into its bits and decoded.</figcaption>
-</figure>
+<ImageFigure src={ad3Logic} alt="WaveForms Logic tool, DIO 0 sampled at 25 MHz with a 1.4 V threshold, 50 microseconds per division. A UART row above the data trace decodes each byte, shown as characters: J, ù, ÿ, CR, RS, ô, ^. Under each, the data trace is marked S for the start bit, 0 to 7 for the data bits, and P at the end of each byte." width={1888} height={402}>
+	The same line on the logic analyzer, with each byte split into its bits and decoded.
+</ImageFigure>
 
 - **The high level is 3.154 V**, read with a cursor on the scope.
   That is the IOREF switch's 3.3 V setting, seen on the wire, and well clear of 5 V.
