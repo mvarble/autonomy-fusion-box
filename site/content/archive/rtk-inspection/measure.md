@@ -5,7 +5,6 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 <script>
 	import board from './board.jpg';
 	import rails from './ardusimple-arduino-rails.jpg';
-	import timeTagging from './im-esf-meas-time-tagging.png';
 	import esfRaw from './id-esf-raw.png';
 	import ucenter from './ucenter-uart1-recording.png';
 	import picocom from './ftdi-picocom.png';
@@ -77,14 +76,6 @@ Everything after this step leans on it.
 - `GND` must always be shared with whatever is connected.
 - `IOREF` sets the voltage the UART pins run at, and has to match the hardware on the other end.
 
-In the integration manual, a search for "IMU" turns up the section on time-tagging sensor data.
-It isn't needed for this lab, but a box built around timing will need it later:
-
-<figure>
-	<img src={timeTagging} alt="ZED-F9R Integration Manual section 3.2.5.2, UBX-ESF-MEAS time tagging. The epoch of sensor data can be taken from the reception time of the message's first byte or from a time mark on an external input. Latency is configurable per sensor. Time tags for all UBX-ESF-MEAS data must have the same resolution, and the receiver generates ESF-MEAS from its internal IMU with a default time tag resolution of 1 millisecond." width="847" height="422" />
-	<figcaption>Integration manual §3.2.5.2, on time-tagging sensor data. Screenshot of <a href="https://www.u-blox.com/docs/UBX-20039643">the manual</a>.</figcaption>
-</figure>
-
 The interface description shows how much of the receiver lives in UBX messages.
 Each has a class, an ID and a fixed layout, like `ESF-RAW`, which carries the IMU's raw samples:
 
@@ -97,6 +88,8 @@ Each has a class, an ID and a fixed layout, like `ESF-RAW`, which carries the IM
 - **The documents come in layers.** The board maker documents the board, and the chip maker documents the chip.
   The pins are the board's business, and the messages are the chip's.
 - **A sibling board's guide is a start, not an answer.** This board's own silkscreen has the final word on which pin is which.
+- **The messages are not fixed.** What comes out of the chip, and so out of UART1, is whatever it has been configured to send.
+  Out of the box that is a little NMEA text; choosing the messages is my job, and step 2 does it.
 - **Every message has a definition to read before parsing it.** `ESF-RAW`'s layout is the one this lab ends up decoding.
 
 ## 2. Configuring UART1 in u-center 2
