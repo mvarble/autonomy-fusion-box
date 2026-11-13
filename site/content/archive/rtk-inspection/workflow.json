@@ -1,6 +1,6 @@
 {
     "kind": "probe",
-    "stage": "publish",
+    "stage": "done",
     "started": "2026-11-13",
     "events": [
         {
@@ -13,6 +13,12 @@
             "action": "approve",
             "stage": "measure",
             "commit": "9701ad9"
+        },
+        {
+            "date": "2026-11-13",
+            "action": "approve",
+            "stage": "publish",
+            "commit": "213a5ef"
         }
     ],
     "approvals": {
@@ -20,6 +26,11 @@
             "date": "2026-11-13",
             "commit": "9701ad9",
             "hash": "b05d930fc750b620bfd76069c37699042a8b648785952cd50cb665eb02ac28ed"
+        },
+        "publish": {
+            "date": "2026-11-13",
+            "commit": "213a5ef"
         }
-    }
+    },
+    "finished": "2026-11-13"
 }
