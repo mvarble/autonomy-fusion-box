@@ -32,14 +32,16 @@ It answers no ledger question by itself.
 ## The setup
 
 <figure>
-	<img src={board} alt="The ArduSimple board in a black enclosure, with a red, a blue, a yellow and a green wire on its headers, leaving through the enclosure wall. The u-blox ZED-F9R module sits at the lower right, beside the SMA antenna connector." width="1444" height="1362" />
-	<figcaption>The board, with the OpenLog's wires from step 5. The F9R module is at the lower right, next to the SMA antenna connector and the POWER + GPS USB-C port.</figcaption>
+	<img src={board} alt="The ArduSimple board in an open black 3D-printed enclosure on a bench mat, wire strippers beside it. Yellow, green, blue and red wires run from the board's headers out through a rough hole melted in the enclosure wall, their stripped ends loose. The u-blox ZED-F9R module sits at the lower right, beside the gold SMA antenna connector." width="1200" height="1600" />
+	<figcaption>The board in its enclosure, with the UART1 and power wires leaving through a hole in the wall. The F9R module is at the lower right, next to the SMA antenna connector.</figcaption>
 </figure>
 
 The board is ArduSimple's simpleRTK2B Fusion, which carries a u-blox ZED-F9R: a GNSS receiver with an IMU inside.
 It sits in a 3D-printed enclosure and is powered over USB.
 The enclosure is a design I found online, [on Thingiverse](https://www.thingiverse.com/thing:3551604), and the Santa Barbara Public Library printed it for me, for free.
 A public library is worth asking before buying a printer for one part.
+The design has no opening for wires, so to close the lid and still reach UART1 I melted a hole through the wall with my soldering iron.
+Neither the enclosure nor the iron was made for this, but the wires fit.
 
 Besides the board, the lab uses:
 
