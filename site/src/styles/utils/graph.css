@@ -45,6 +45,13 @@
         white-space: nowrap;
     }
 
+    /* A node's label may break into lines with \n, each centred. */
+    > span.node-label {
+        white-space: pre;
+        text-align: center;
+        line-height: 1.35;
+    }
+
     .katex {
         font-size: 1.05em;
     }
