@@ -114,9 +114,9 @@ a printer for one part. The four coloured wires are left
 over from [the first attempt](#before-this-lab-a-first-attempt-months-ago). They run to the
 SparkFun OpenLog, and they were left in place for this lab.
 
-The host is my desktop computer, running Arch Linux, kernel 7.2.14-arch1-1. The scripts run from the Pixi
-environment at the repository root: Python 3.15.2, pyubx2 1.4.1 and pyserial 3.5. A Windows
-install of u-center 2, u-blox's own tool, served as a cross-check.
+The host is my desktop computer, running Arch Linux, kernel 7.2.14-arch1-1. The scripts run from
+the Pixi environment at the repository root: Python 3.15.2, pyubx2 1.4.1 and pyserial 3.5. A
+Windows install of u-center 2, u-blox's own tool, served as a cross-check.
 
 ## 1. How the receiver appears over USB
 
