@@ -32,6 +32,8 @@ Demonstrated in this probe:
 - They wired a UART (TX, RX, 5 V, ground) to that logger.
 - They ran and extended a short pyubx2 script against the receiver, recorded UART1 through the FTDI
   adapter and the OpenLog, and parsed both recordings, reporting the output as screenshots.
+- They put UART1 on the Analog Discovery 3, on the scope and the logic analyzer with a UART
+  decoder, and read the high level with a cursor.
 
 New to them, or not yet familiar:
 
