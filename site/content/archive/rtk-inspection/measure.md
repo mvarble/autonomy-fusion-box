@@ -9,9 +9,10 @@ summary: A hands-on warm-up with the ArduSimple ZED-F9R board before working thr
 	import esfRaw from './id-esf-raw.png';
 	import ucenter from './ucenter-uart1-recording.png';
 	import picocom from './ftdi-picocom.png';
+	import ioref from './ioref-switch.jpg';
 </script>
 
-I am a navigation engineer, not an embedded developer, and this box is how I am learning the
+I am a mathematician that has found a career as a navigation engineer, not an embedded developer, and this box is how I am learning the
 hardware side, with an AI assistant alongside. The [ledger](../../reference/open-questions/index.md)
 is full of questions about this receiver that the assistant raised, and answering them will mean
 polling messages, reading bytes and wiring pins. Before that, I wanted a feel for the basics with
@@ -159,6 +160,29 @@ out of `TX1` at the baud rate just configured.
 - the adapter's `RX` to the board's `TX1`, since one side's output is the other's input;
 - the adapter's `GND` to the board's `GND`;
 - the adapter's logic level matched to the board's IOREF.
+
+IOREF is the voltage the UART pins swing between ground and. A 3.3 V adapter that sees 5 V on its
+`RX` can be damaged, and so can a Raspberry Pi's GPIO, so this is worth checking before the first
+wire goes on. On this board a slide switch beside the F9R module sets it:
+
+<figure>
+	<img src={ioref} alt="Close-up of the board beside the ZED-F9R module. A vertical slide switch is labelled IOREF = 3V3, 5V = OUTPUT at its top end and IOREF & 5V ARE INPUTS at its bottom end. To its right, the IOREF LED (LED6) is lit blue and the NO RTK LED is lit red. Below, connector J4 is labelled PIXHAWK + POWER, with pins VIN, RX1, TX1, TPS, EVT and GND." width="1600" height="1200" />
+	<figcaption>The IOREF switch. Its two positions are labelled <code>IOREF = 3V3, 5V = OUTPUT</code> and <code>IOREF &amp; 5V ARE INPUTS</code>.</figcaption>
+</figure>
+
+As the labels read, the two positions do this:
+
+- **`IOREF = 3V3, 5V = OUTPUT`:** the board sets IOREF to 3.3 V itself, and supplies 5 V on its
+  `5V` pin.
+- **`IOREF & 5V ARE INPUTS`:** the connected hardware supplies both. That matches the sibling
+  board's guide from step 1, which says IOREF must then be connected to the voltage the other
+  hardware needs.
+
+For a 3.3 V adapter, and later for the Pi, the first position is the one to want. Confirm it with
+a meter on the `IOREF` pin before connecting anything.
+
+> [!TODO]
+> Which position is the switch in, and did you measure IOREF?
 
 Plugged into the computer, the adapter appears as `/dev/ttyUSB0`. It is a bridge chip: on one side
 it speaks UART, on the other USB, and Linux's `ftdi_sio` driver presents it as a serial port. Open
