@@ -127,8 +127,18 @@ It sets five keys, each in all three layers: RAM, BBR and flash. Their meanings 
 | `CFG-NAV2-OUT_ENABLED`         |      1 | the secondary, GNSS-only output (NAV2)        |
 
 *Checking the bytes.* I connected the UART1 pins to an FTDI USB-serial adapter and watched the
-bytes arrive in picocom on Linux. Then I swapped the adapter for a SparkFun OpenLog, set to the
-same 115200 baud, which wrote UART1 to an SD card. Its `config.txt`, verbatim:
+bytes arrive in picocom on Linux. The adapter is a bridge chip: on one side it speaks the UART's
+TX and RX, on the other USB, and Linux's `ftdi_sio` driver presents it as `/dev/ttyUSB0`. picocom
+is a minimal serial terminal that sets the port's baud rate and copies whatever arrives to the
+screen. UBX is binary, so most of it shows as garbage, but garbage that keeps arriving is the
+answer this step wants: the pins are alive, and the baud rate is right. A wrong baud rate gives
+garbage too, so the real confirmation comes when the bytes decode, in
+[check 5](#5-what-the-imu-stream-looks-like).
+
+*Recording.* To keep the data rather than watch it, I swapped the adapter for a SparkFun OpenLog. I
+chose it because I had one sitting around: a small board that writes whatever arrives on its
+serial input to a file on an SD card, with no computer attached. It was set to the same 115200
+baud. Its `config.txt`, verbatim:
 
 ```text
 115200,26,3,0,1,1,0
@@ -137,6 +147,30 @@ baud,escape,esc#,mode,verb,echo,ignoreRX
 
 The wiring, as the [photo](#the-setup) shows it: the OpenLog takes the F9R's `TX1` (yellow) and
 drives its `RX1` (green), with 5 V (red) and ground (blue).
+
+The FTDI adapter could have recorded just as well, and it is the simpler choice when a computer is
+at the bench anyway. A serial port on Linux is a file, so once the port is set up, plain `cat`
+copies UART1 into a file:
+
+```sh
+stty -F /dev/ttyUSB0 115200 raw -echo   # the UART's baud rate; raw: no line-ending translation
+cat /dev/ttyUSB0 > uart1.ubx            # Ctrl+C to stop
+```
+
+I didn't run this in the lab. Four details decide whether it works:
+
+- **The baud rate is real here.** On the F9R's own USB the baud setting is ignored
+  ([check 2](#2-how-the-receiver-appears-over-usb)). An FTDI chip, though, drives an actual UART
+  with it, so it must match `CFG-UART1-BAUDRATE`.
+- **`raw` matters.** Without it the terminal driver may translate line endings or act on control
+  bytes, which corrupts binary data. `picocom --logfile` does the same job with the settings
+  handled for you.
+- **The voltage level must match.** The adapter's logic level has to suit the board's IOREF; see
+  [check 4](#4-what-the-board-says).
+- **The SD card is better when the board moves.** The OpenLog needs no computer, which suits
+  carrying the board around. Recording on a computer, on the other hand, can add a host timestamp
+  to each read. The logs here have no clock of their own, and that is exactly what
+  [#11](../../reference/open-questions/index.md#blocking-m2) still needs.
 
 **What came out.** Data flowed: bytes arrived in picocom through the FTDI adapter, and the OpenLog
 wrote four logs to its card. [Check 5](#5-what-the-imu-stream-looks-like) decodes them. They hold
