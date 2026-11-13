@@ -400,9 +400,6 @@ Close picocom first: only one program at a time can hold the port.
 - **Raw IMU values are raw.** `accel_z` reads about 10.47 m/s², where gravity alone would give about 9.8.
   `ESF-RAW` carries the sensor's output before any calibration, and the gyro runs warm, at about 33 °C.
 
-> [!TODO]
-> Correct these in your own words, and add what surprised you.
-
 ## 5. Recording with the OpenLog
 
 **What it is for.** Recording without a computer.
@@ -467,9 +464,6 @@ pixi run python tools/ubx-parse.py /mnt/sdcard/LOG00004.TXT --last 2
 - **Lost bytes are not the adapter's fault alone.** A frame went missing mid-stream on the OpenLog too, so whatever drops bytes is not specific to the computer or the FTDI adapter.
 - **Green carries the OpenLog's output into the receiver's `RX1`.** Whatever the OpenLog transmits reaches UART1's input, so that wire should come off if UART1 is ever wired to anything else.
 
-> [!TODO]
-> Add anything else, in your own words.
-
 ## What comes next
 
 With data flowing from the pins into a file and a parser, the ledger's questions about the receiver become things to try rather than things to read about.
@@ -478,3 +472,4 @@ The first ones this sets up:
 - [#1](../../reference/open-questions/index.md#blocking-m1), which firmware the receiver runs: poll `UBX-MON-VER`.
 - [#11](../../reference/open-questions/index.md#blocking-m2), the IMU's sample rate and how `ESF-RAW` frames it: steps 4 and 5 already show the framing, and a recording through the adapter can time it.
 - [#14](../../reference/open-questions/index.md#blocking-m2), whether a logger and the Pi conflict on the receiver's ports: this lab puts the logger on UART1.
+- [#32](../../reference/open-questions/index.md#blocking-m2), why frames arrive cut short in the middle of a recording: it happened through both the adapter and the OpenLog.
