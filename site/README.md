@@ -33,7 +33,9 @@ taken to be the parent of the working directory.
 | `katex.config.ts`                        | Site-wide KaTeX macros.                                                                                                      |
 
 The content goes through [`@mvarble/mesearch-cms`](https://github.com/mvarble/mesearch/tree/main/packages/cms)
-with its `skoroPreset` (named for the project this site was adapted from): it reads every document, resolves links, numbers equations and statements,
+with this site's own preset, `sitePreset` in `src/lib/cms/` (adapted from the one in skoro, the
+project this site was adapted from, and tested against the fixture in `test/cms/`): it reads every
+document, resolves links, numbers equations and statements,
 collects citations, and serves all of it to the routes as `$cms`. A link to a document that does
 not exist, or a `depends_on` that names nothing, is reported when the site builds. KaTeX and the
 scroll box around display math come from

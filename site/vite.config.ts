@@ -1,7 +1,7 @@
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { createCms } from '@mvarble/mesearch-cms';
-import { skoroPreset } from '@mvarble/mesearch-cms/presets/skoro';
+import { sitePreset } from './src/lib/cms/preset.ts';
 import { rehypeKatex, rehypeMathBox, type PluginEntry } from '@mvarble/mesearch-markdown';
 import { mdsvex, escapeSvelte } from 'mdsvex';
 import remarkMath from 'remark-math';
@@ -24,7 +24,7 @@ const REPO_BRANCH = 'main';
 // The content database: every document under `content/`, with its links, numbered equations and
 // statements resolved, served to the routes as `$cms`.
 const cms = createCms({
-    preset: skoroPreset({
+    preset: sitePreset({
         contentDir: 'content',
         tracks: TRACKS.map((track) => track.id),
         documents: Object.fromEntries(DOCUMENTS.map((doc) => [doc.name, doc.title])),

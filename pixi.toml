@@ -1,0 +1,15 @@
+[workspace]
+authors = ["Matthew Varble <matthew@rodent.club>"]
+name = "fusion-box"
+channels = ["https://prefix.dev/robostack-jazzy", "conda-forge"]
+platforms = [
+  { name = "pi", platform = "linux-aarch64", glibc = "2.41" },
+  { name = "x86", platform = "linux-64", glibc = "2.41" },
+]
+
+[dependencies]
+python = "*"
+
+[pypi-dependencies]
+pyubx2 = ">=1.4.1, <2"
+pyserial = ">=3.5, <4"

@@ -1,21 +1,21 @@
 import { resolve } from '$app/paths';
-import type { SkoroDocument } from '@mvarble/mesearch-cms/presets/skoro/runtime';
+import type { SiteDocument } from '$lib/cms/runtime';
 
 export type {
     Heading,
-    SkoroDocument,
-    SkoroEntry,
-    SkoroEntryDocument,
-    SkoroMath,
-    SkoroPage,
+    SiteDocument,
+    SiteEntry,
+    SiteEntryDocument,
+    SiteMath,
+    SitePage,
     WorkflowEvent,
-} from '@mvarble/mesearch-cms/presets/skoro/runtime';
+} from '$lib/cms/runtime';
 
 // What the navigation and the lists of documents need of one, small enough to send with every
 // page.
 export interface DocumentLink {
     key: string;
-    kind: SkoroDocument['kind'];
+    kind: SiteDocument['kind'];
     title: string;
     href: string;
     summary: string;
@@ -40,7 +40,7 @@ export function markdownHrefOf(key: string): string {
     return resolve('/[...key].md', { key });
 }
 
-export function linkOf(record: SkoroDocument): DocumentLink {
+export function linkOf(record: SiteDocument): DocumentLink {
     return {
         key: record.key,
         kind: record.kind,

@@ -1,10 +1,10 @@
 import { error } from '@sveltejs/kit';
 import { cms } from '$cms';
-import { citationLabel } from '@mvarble/mesearch-cms/presets/skoro/runtime';
+import { citationLabel } from '@mvarble/mesearch-cms/runtime';
 import { referenceHtml } from '@mvarble/mesearch-ui/server';
 
 import { resolve } from '$app/paths';
-import { hrefOf, linkOf, type DocumentLink, type SkoroDocument } from '$lib/documents';
+import { hrefOf, linkOf, type DocumentLink, type SiteDocument } from '$lib/documents';
 import { ARCHIVE, MATH, SITE, TRACKS } from '$lib/site';
 
 export interface Crumb {
@@ -23,7 +23,7 @@ export interface Reference {
 export function documentData(key: string) {
     const doc = cms.get(key);
     if (!doc) error(404, `No document ${key}.`);
-    const links = (records: SkoroDocument[]) => records.map(linkOf);
+    const links = (records: SiteDocument[]) => records.map(linkOf);
     const keys = (list: string[]) =>
         list.flatMap((k) => {
             const record = cms.get(k);

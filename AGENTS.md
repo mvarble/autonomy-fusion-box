@@ -9,7 +9,10 @@ ground truth.
 ## Working with the user
 
 - They are a navigation and state-estimation engineer (GTSAM factor graphs, IMU and RF ranging
-  fusion, ROS 2) who writes C++ and Python daily. Skip basic explanations.
+  fusion, ROS 2) who writes C++ and Python daily. Skip basic explanations of those.
+- This is their first embedded project. `.agents/reference/learner.md` logs what they have shown
+  they know about hardware and what is still new; read it before explaining, planning or writing up
+  hands-on work, and add to it as entries show more.
 - Be direct. Point out pitfalls rather than reassuring. Prefer short, checkable task lists.
 - Ask before decisions that are expensive to reverse: OS choice, repo-wide structure, anything that
   writes to the Pi's boot config, and any write to the F9R's flash.
@@ -74,14 +77,14 @@ Rules that hold whether or not a command was invoked:
 
 ## Layout
 
-| path                  | what it is                                                   |
-| --------------------- | ------------------------------------------------------------ |
-| `site/`               | the companion site; `site/README.md` says how it works       |
-| `site/content/`       | pages, math notes, the ledger, and the archive of entries    |
-| `bin/wf`, `tools/wf/` | the workflow's command line and its tests                    |
-| `.workflow/active`    | the entry this branch works on, written by `bin/wf` alone    |
-| `.agents/skills/`     | the skills (linked into `.claude/skills/` for Claude Code)   |
-| `.agents/reference/`  | `workflow.md` (the procedure), `authoring.md` (how to write) |
+| path                  | what it is                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `site/`               | the companion site; `site/README.md` says how it works                                                      |
+| `site/content/`       | pages, math notes, the ledger, and the archive of entries                                                   |
+| `bin/wf`, `tools/wf/` | the workflow's command line and its tests                                                                   |
+| `.workflow/active`    | the entry this branch works on, written by `bin/wf` alone                                                   |
+| `.agents/skills/`     | the skills (linked into `.claude/skills/` for Claude Code)                                                  |
+| `.agents/reference/`  | `workflow.md` (the procedure), `authoring.md` (how to write), `learner.md` (the user's hardware experience) |
 
 The box's own directories, decided in the `foundations` entry and created in M0, sit flat at the top
 level: `firmware/` (the Pico), `ros2_ws/` (the ROS 2 workspace), `host/` (services that must run

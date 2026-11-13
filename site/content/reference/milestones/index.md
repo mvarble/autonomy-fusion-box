@@ -4,8 +4,9 @@ summary: The nine milestones from repository scaffolding to fusion, and the draf
 order: 2
 ---
 
-Each milestone is opened with `/wf-start <slug> milestone` and ends in measurements. None has been
-started. All the hardware is in hand.
+Each milestone is opened with `/wf-start <slug> milestone` and ends in measurements.
+None has been started.
+All the hardware is in hand.
 
 |     | Milestone                      | What it must show                                                                                                                                     |
 | --- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,20 +22,19 @@ started. All the hardware is in hand.
 
 ## M1: draft plan
 
-This is a draft to start `/wf-plan` from. Nothing here has been applied, and the boot config change
-is shown only as a diff. The pass mark is a proposal: under 10 µs residual bias after correction,
-with jitter reported at p50, p99 and maximum. It does not need to be tighter, because the Pi clock is
-not in the measurement timing chain. Camera stamps come from the Pico and IMU stamps from the
-receiver, so the Pi clock serves only latency diagnostics and frame-to-trigger matching.
+This is a draft to start `/wf-plan` from.
+Nothing here has been applied, and the boot config change is shown only as a diff.
+The pass mark is a proposal: under 10 µs residual bias after correction, with jitter reported at p50, p99 and maximum.
+It does not need to be tighter, because the Pi clock is not in the measurement timing chain.
+Camera stamps come from the Pico and IMU stamps from the receiver, so the Pi clock serves only latency diagnostics and frame-to-trigger matching.
 
 ### Preflight, read-only
 
-- Image the Pi with 64-bit Raspberry Pi OS Trixie, and run the image checks in the
-  [ledger](../open-questions/#os-decision-evidence), including the page size (#29).
-- Poll `MON-VER`, and save a `VALGET` snapshot of every layer. The SD logger depends on this receiver,
-  so we need a way back.
-- Find TIMEPULSE on the board and check its swing with the AD3 **before** connecting the Pi, outdoors
-  with a fix. There is no pulse before time lock.
+- Image the Pi with 64-bit Raspberry Pi OS Trixie, and run the image checks in the [ledger](../open-questions/#os-decision-evidence), including the page size (#29).
+- Poll `MON-VER`, and save a `VALGET` snapshot of every layer.
+  The SD logger depends on this receiver, so we need a way back.
+- Find TIMEPULSE on the board and check its swing with the AD3 **before** connecting the Pi, outdoors with a fix.
+  There is no pulse before time lock.
 
 ### Wiring
 
@@ -72,10 +72,9 @@ Once M2 raises the rate, `trigger_bridge` must use the last `TIM-TP` before each
 
 ### Coarse time and chrony
 
-A small host process, `host/ubx_mux`, owns the F9R port. It logs raw UBX, forwards
-bytes to the ROS node, and feeds chrony only when `NAV-PVT` shows `validTime` and `fullyResolved`, so
-time sync runs without ROS. The SOCK message format comes from `refclock_sock.c` for
-the installed chrony version.
+A small host process, `host/ubx_mux`, owns the F9R port.
+It logs raw UBX, forwards bytes to the ROS node, and feeds chrony only when `NAV-PVT` shows `validTime` and `fullyResolved`, so time sync runs without ROS.
+The SOCK message format comes from `refclock_sock.c` for the installed chrony version.
 
 ```text
 refclock SOCK /run/chrony.gnss.sock refid GNSS poll 2 delay 0.2 noselect
@@ -89,8 +88,8 @@ logdir /var/log/chrony    # moves to the data partition in M5
 
 ### AD3 measurements
 
-The AD3 buffers 32,768 samples per channel, so these run as one triggered capture per PPS: at
-100 MS/s the window is about 328 µs, centred on the edge. Experiment A is the exception.
+The AD3 buffers 32,768 samples per channel, so these run as one triggered capture per PPS: at 100 MS/s the window is about 328 µs, centred on the edge.
+Experiment A is the exception.
 
 | Experiment      | Measures                                | Method                                                                                                                                                                                   |
 | --------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -99,7 +98,6 @@ The AD3 buffers 32,768 samples per channel, so these run as one triggered captur
 | C: system clock | True clock error against GPS            | A pinned `SCHED_FIFO` process spins until `CLOCK_REALTIME` reads k+0.1 s, then toggles GPIO27 via `/dev/gpiomem0`. The AD3 compares that with the TIMEPULSE **falling** edge at k+0.1 s. |
 | D: conditions   | What moves the bias                     | Repeat B and C for RP1 L1 on and off, default and `performance` governor, idle and loaded, 1 hour each, logging temperature.                                                             |
 
-Experiment C uses the falling edge because activity on RP1 near the PPS changes the latency being
-measured, and the short interval makes AD3 clock error negligible. A dummy RP1 read just before the
-toggle keeps L1 wake-up out of the result. To check the sign of chrony's `offset`, set it from
-experiment C and rerun: the error should shrink towards 0, and if it doubles the sign is wrong.
+Experiment C uses the falling edge because activity on RP1 near the PPS changes the latency being measured, and the short interval makes AD3 clock error negligible.
+A dummy RP1 read just before the toggle keeps L1 wake-up out of the result.
+To check the sign of chrony's `offset`, set it from experiment C and rerun: the error should shrink towards 0, and if it doubles the sign is wrong.
