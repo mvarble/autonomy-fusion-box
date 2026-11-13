@@ -71,6 +71,23 @@
         border-radius: var(--radius);
     }
 
+    /* A photo or other image figure written in a document; code blocks and graphs style their own. */
+    figure:not(.code-block, .model-graph) {
+        margin: var(--space-6) 0;
+
+        img {
+            height: auto;
+            margin: 0 auto;
+        }
+
+        figcaption {
+            margin-top: var(--space-3);
+            font: var(--font-small);
+            color: var(--fg-3);
+            text-align: center;
+        }
+    }
+
     a code {
         color: inherit;
     }

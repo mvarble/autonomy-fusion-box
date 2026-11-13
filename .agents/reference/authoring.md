@@ -166,4 +166,6 @@ to the archive entry that decided it.
 
 A graph (a timing chain, a wiring diagram, a factor graph) is drawn with `<ModelGraph spec={name} />` from a
 `*.graph.ts` file beside the document (see `site/README.md`). Any other figure is an image or a Svelte component in the
-document's folder, referenced relatively.
+document's folder, referenced relatively. An image is imported in the document's `<script>`
+(`import board from './board.jpg'`) and placed with `<img src={board} alt="…" />`, so the build
+serves it under the site's base path.

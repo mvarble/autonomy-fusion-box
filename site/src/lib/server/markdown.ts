@@ -12,6 +12,13 @@ const graphModules = import.meta.glob<Record<string, GraphSpec>>('/content/**/*.
     eager: true,
 });
 
+// Every image beside a page, as the URL the build serves it from.
+const imageUrls = import.meta.glob<string>('/content/**/*.{jpg,jpeg,png,webp,gif,svg}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+});
+
 // A document as Markdown for a reader without a browser: the raw source, with its frontmatter
 // kept so its KaTeX macros stay visible, a `# title` heading added after it, the `<script>` block
 // that imports components dropped, every `<ModelGraph spec={name} />` replaced by a text
@@ -26,10 +33,14 @@ export function markdownOf(doc: SkoroDocument): string {
     const frontmatter = match ? match[0] : '';
     const rest = raw.slice(frontmatter.length);
     const script = /^\s*<script[\s\S]*?<\/script>\s*/.exec(rest)?.[0] ?? '';
-    const body = inlineStatements(
-        describeGraphs(rest.slice(script.length).trim(), script, doc),
+    const body = imageSources(
+        inlineStatements(
+            describeGraphs(rest.slice(script.length).trim(), script, doc),
+            script,
+            file,
+        ),
         script,
-        file,
+        doc,
     );
     const markdown = relinked(expandFileRefs(body, file), doc);
     return `${frontmatter}\n# ${doc.title}\n\n${markdown}\n`;
@@ -93,6 +104,21 @@ function inlineStatements(body: string, script: string, file: string): string {
             .split('\n')
             .map((line) => (line ? `> ${line}` : '>'))
             .join('\n');
+    });
+}
+
+// Replaces each `src={name}` whose `name` is an image the document imports, `import name from
+// './x.jpg'`, with the URL the build serves that image from.
+function imageSources(body: string, script: string, doc: SkoroDocument): string {
+    const dir = path.posix.dirname(`/${doc.filename}`);
+    const urls = new Map<string, string>();
+    for (const [, name, from] of script.matchAll(/import\s+(\w+)\s+from\s*['"](\.[^'"]+)['"]/g)) {
+        const url = imageUrls[path.posix.join(dir, from!)];
+        if (url) urls.set(name!, url);
+    }
+    return body.replace(/src=\{(\w+)\}/g, (whole, name: string) => {
+        const url = urls.get(name);
+        return url ? `src="${url}"` : whole;
     });
 }
 
