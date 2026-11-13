@@ -73,7 +73,7 @@ configured UBX output on the board's UART pins, not on USB.
 | extension 5    | `GPS;GLO;GAL;BDS`        |
 | extension 6    | `SBAS;QZSS`              |
 
-u-center 2 gave the same answer.
+u-center 2 reported the same value in every field.
 
 ## What I learned
 
