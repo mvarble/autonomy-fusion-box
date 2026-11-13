@@ -94,9 +94,13 @@ Each has a class, an ID and a fixed layout, like `ESF-RAW`, which carries the IM
 
 ## 2. Configuring UART1 in u-center 2
 
-**What it is for.** Out of the box, UART1 runs at 38400 baud and sends NMEA text.
+**What it is for.** Making the receiver send the messages I care about on UART1, the port on the header pins, so the rest of the lab has something to look at.
+At this point I didn't know what UART1's settings were, or even what a baud rate was.
+Rather than learn the protocol first, I reached for u-center 2, u-blox's graphical tool.
+It connects to the receiver, shows the messages it is sending, and lists every configuration key with its current value, so it does much of the discovery for you.
+
+What it shows is that, out of the box, UART1 runs at 38400 baud and sends NMEA text.
 UBX is enabled on it, but no UBX message is switched on (integration manual §3.1.3; USB starts the same way).
-Making the receiver send the messages I care about on UART1, the port on the header pins, is what gives the rest of the lab something to look at.
 
 **How it is done.** In u-center 2, connect to the receiver.
 Then, under *Device configuration*, *Advanced configuration*, set keys by name and save them as a named configuration.
@@ -128,7 +132,10 @@ Their meanings are from the interface description, §6.9.9 (`CFG-MSGOUT`) and §
 - **Configuration has layers.** RAM is lost at power-off, BBR lasts while a backup supply holds, and flash is permanent.
   Writing to flash, as here, makes the change survive a power cycle, but it also means the board no longer starts from its defaults.
   The box itself will write RAM and BBR only, and touch flash only after asking.
-- **The baud rate is now 115200.** Anything listening on UART1 has to use the same rate.
+- **A GUI is a fine way in.** u-center showed me which settings exist before I knew what to ask for, and the keys it set are the same ones a script will set later.
+- **The baud rate is the line's speed, and both ends must agree on it.** It counts the signal changes per second on the wire.
+  With the usual framing of 8 data bits plus a start and a stop bit, each byte takes 10 of them, so 115200 baud carries at most 11 520 bytes a second.
+  UART1 is now at 115200, and anything listening on it has to use the same rate.
 
 ## 3. Checking that bytes flow
 
