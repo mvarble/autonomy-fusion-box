@@ -68,21 +68,33 @@ configured UBX output on the board's UART pins, not on USB.
 
 ## Results
 
-> [!TODO]
-> Paste the script's output verbatim, the hex line and the parsed line. The reading reported so far
-> was `extension_04='MOD-ZED-F9R'`, but the receiver writes `MOD=` like `FWVER=` and `PROTVER=`, so
-> it may have been retyped.
+The reply, exactly as the script printed it (228 bytes):
 
-| field          | value                    |
-| -------------- | ------------------------ |
-| `swVersion`    | `EXT CORE 1.00 (f8b901)` |
-| `hwVersion`    | `00190000`               |
-| extension 1    | `ROM BASE 0x118B2060`    |
-| extension 2    | `FWVER=HPS 1.40`         |
-| extension 3    | `PROTVER=33.40`          |
-| extension 4    | `MOD-ZED-F9R` (as typed) |
-| extension 5    | `GPS;GLO;GAL;BDS`        |
-| extension 6    | `SBAS;QZSS`              |
+```text
+b5620a04dc0045585420434f524520312e3030202866386239303129000000000000000030303139303030300000524f4d20424153452030783131384232303630000000000000000000000046575645523d48505320312e34300000000000000000000000000000000050524f545645523d33332e343000000000000000000000000000000000004d4f443d5a45442d463952000000000000000000000000000000000000004750533b474c4f3b47414c3b424453000000000000000000000000000000534241533b515a535300000000000000000000000000000000000000000006f1
+```
+
+I checked the frame by hand as well as through pyubx2:
+
+- `b5 62` is the sync, and `0a 04` is the class and ID of `MON-VER`.
+- `dc 00` is the payload length, little-endian: 220 bytes. That matches the bytes received, and
+  fits the layout of a 30-byte `swVersion`, a 10-byte `hwVersion`, then six 30-byte extensions
+  (30 + 10 + 6 × 30 = 220).
+- The checksum, the 8-bit Fletcher sum over class, ID, length and payload, comes out to `06 f1`, the
+  last two bytes received.
+
+Each field is NUL-padded ASCII:
+
+| field       | value                    |
+| ----------- | ------------------------ |
+| `swVersion` | `EXT CORE 1.00 (f8b901)` |
+| `hwVersion` | `00190000`               |
+| extension 1 | `ROM BASE 0x118B2060`    |
+| extension 2 | `FWVER=HPS 1.40`         |
+| extension 3 | `PROTVER=33.40`          |
+| extension 4 | `MOD=ZED-F9R`            |
+| extension 5 | `GPS;GLO;GAL;BDS`        |
+| extension 6 | `SBAS;QZSS`              |
 
 u-center 2 reported the same value in every field.
 
@@ -105,6 +117,7 @@ u-center 2 reported the same value in every field.
 
 ## What it closes
 
-- [#1](../../reference/open-questions/index.md#blocking-m1): **MEASURED**, HPS 1.40.
-- Opens: the configuration keys have not been checked against the HPS 1.40 interface description.
-  Added to the ledger as a new question.
+- [#1](../../reference/open-questions/index.md#blocking-m1): **MEASURED**, HPS 1.40, protocol
+  33.40.
+- Opens [#32](../../reference/open-questions/index.md#blocking-m1): every key the box sets has yet to
+  be checked against the HPS 1.40 interface description, which is not yet in the ledger's sources.
