@@ -534,8 +534,142 @@ right only when the wraps are unwrapped, which confirms them.
 | `LOG00003.TXT` |          10.5203 |          −0.0791 |          −0.4315 |          +0.0245 | 21.00 to 34.89 |
 | `LOG00004.TXT` |          10.4820 |          −0.0664 |          −0.4481 |          +0.0156 | 20.86 to 31.89 |
 
-> [!TODO]
-> Where the raw logs live: they are in `sdcard/` at the repository root, untracked, about 60 MB.
+**Where the raw data is.** Nowhere any more. I copied the logs off the SD card to look at them,
+and deleted the copies once this was written. The four `--summary` outputs below, from
+`tools/ubx-dump.py` as committed, are the record. Every number in this section comes from them.
+
+<details>
+<summary>The four summaries, verbatim</summary>
+
+`pixi run python tools/ubx-dump.py LOG00001.TXT --summary`:
+
+```text
+179473 bytes
+  junk                       21 bytes (0.012%)
+  nmea                      748 bytes (0.417%)
+  ubx                    178704 bytes (99.572%)
+frames:
+  ESF-RAW                  2628
+  GNTXT                      22
+  junk                        1
+NMEA TXT texts:
+      22  txbuf alloc S
+ESF-RAW data types per message (count):
+      2628  [16, 17, 18, 14, 13, 5, 12] = ['accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z', 'gyro_temp']
+  messages whose samples carry different sTtags: 0
+  sTtag first=6527 last=697112 max seen=697112; unwrapped span=690585 ticks over 0 wraps at 2^24 (tick unit not stated in the documents; see measure.md)
+  sTtag step between messages: n=2627 min=156 p1=228 p50=257 p99=514 p99.9=1546 max=1801, still non-increasing=0
+  most common steps: 257 ticks x1126, 258 ticks x558, 256 ticks x244, 259 ticks x151, 255 ticks x63, 228 ticks x45, 260 ticks x25, 254 ticks x20
+  steps over 1.5 x the median (257): 49 (1.87% of steps), about 71 messages missing (2.63% of those expected)
+  reserved0 as a little-endian U4: first=2799 last=29643 span=26844, decreasing steps=0; sTtag span / reserved0 span = 25.7259
+ESF-RAW values (scaled):
+  gyro_z     n=2628     mean=-0.0766 sd=0.6448 min=-10.2212 max=+0.4114 deg/s
+  gyro_temp  n=2628     mean=+24.1357 sd=0.5741 min=+22.9500 max=+25.0700 degC
+  gyro_y     n=2628     mean=-0.4909 sd=0.1773 min=-8.1709 max=+0.6934 deg/s
+  gyro_x     n=2628     mean=-0.0364 sd=0.1313 min=-4.2380 max=+1.3870 deg/s
+  accel_x    n=2628     mean=-0.3826 sd=0.0198 min=-0.5264 max=-0.0156 m/s^2
+  accel_y    n=2628     mean=-0.0960 sd=0.0248 min=-0.6455 max=+0.2637 m/s^2
+  accel_z    n=2628     mean=+10.4284 sd=0.0142 min=+10.3037 max=+10.6016 m/s^2
+  |accel|    n=2628     mean=10.4359 p50=10.4357 sd=0.0142 m/s^2
+```
+
+`pixi run python tools/ubx-dump.py LOG00002.TXT --summary`:
+
+```text
+39260528 bytes
+  junk                       14 bytes (0.000%)
+  nmea                   201722 bytes (0.514%)
+  ubx                  39058792 bytes (99.486%)
+frames:
+  ESF-RAW                574394
+  GNTXT                    5933
+  junk                        1
+NMEA TXT texts:
+    5933  txbuf alloc S
+ESF-RAW data types per message (count):
+    574394  [16, 17, 18, 14, 13, 5, 12] = ['accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z', 'gyro_temp']
+  messages whose samples carry different sTtags: 0
+  sTtag first=6522 last=1710362 max seen=16776997; unwrapped span=152698784 ticks over 9 wraps at 2^24 (tick unit not stated in the documents; see measure.md)
+  sTtag step between messages: n=574393 min=156 p1=228 p50=257 p99=515 p99.9=1543 max=2059, still non-increasing=0
+  most common steps: 257 ticks x317070, 258 ticks x122507, 256 ticks x51930, 259 ticks x22551, 255 ticks x8364, 514 ticks x4919, 228 ticks x4683, 235 ticks x4581
+  steps over 1.5 x the median (257): 13994 (2.44% of steps), about 22087 messages missing (3.70% of those expected)
+  reserved0 as a little-endian U4: first=2819 last=5939670 span=5936851, decreasing steps=0; sTtag span / reserved0 span = 25.7205
+ESF-RAW values (scaled):
+  gyro_z     n=574394   mean=+0.0172 sd=0.1989 min=-55.6560 max=+17.7974 deg/s
+  gyro_temp  n=574394   mean=+31.3212 sd=1.4250 min=+21.3400 max=+33.0500 degC
+  gyro_y     n=574394   mean=-0.4320 sd=0.3847 min=-66.9136 max=+76.3723 deg/s
+  gyro_x     n=574394   mean=-0.0605 sd=0.2283 min=-53.1865 max=+41.2654 deg/s
+  accel_x    n=574394   mean=-0.3175 sd=0.0284 min=-4.2959 max=+7.0410 m/s^2
+  accel_y    n=574394   mean=-0.1780 sd=0.0240 min=-2.6660 max=+2.8154 m/s^2
+  accel_z    n=574394   mean=+10.4615 sd=0.0260 min=+5.6084 max=+16.2949 m/s^2
+  |accel|    n=574394   mean=10.4679 p50=10.4691 sd=0.0263 m/s^2
+```
+
+`pixi run python tools/ubx-dump.py LOG00003.TXT --summary`:
+
+```text
+17748762 bytes
+  junk                       14 bytes (0.000%)
+  nmea                    90780 bytes (0.511%)
+  ubx                  17657968 bytes (99.488%)
+frames:
+  ESF-RAW                259676
+  GNTXT                    2670
+  junk                        1
+NMEA TXT texts:
+    2670  txbuf alloc S
+ESF-RAW data types per message (count):
+    259676  [16, 17, 18, 14, 13, 5, 12] = ['accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z', 'gyro_temp']
+  messages whose samples carry different sTtags: 0
+  sTtag first=6518 last=1710361 max seen=16776991; unwrapped span=68812707 ticks over 4 wraps at 2^24 (tick unit not stated in the documents; see measure.md)
+  sTtag step between messages: n=259675 min=158 p1=228 p50=257 p99=515 p99.9=1520 max=2059, still non-increasing=0
+  most common steps: 257 ticks x142623, 258 ticks x53997, 256 ticks x24579, 259 ticks x10673, 255 ticks x4202, 514 ticks x2517, 228 ticks x2081, 235 ticks x2061
+  steps over 1.5 x the median (257): 6387 (2.46% of steps), about 9125 messages missing (3.39% of those expected)
+  reserved0 as a little-endian U4: first=2798 last=2678314 span=2675516, decreasing steps=0; sTtag span / reserved0 span = 25.7194
+ESF-RAW values (scaled):
+  gyro_z     n=259676   mean=+0.0245 sd=0.0417 min=-0.3735 max=+0.2515 deg/s
+  gyro_temp  n=259676   mean=+32.9811 sd=2.5213 min=+21.0000 max=+34.8900 degC
+  gyro_y     n=259676   mean=-0.4315 sd=0.0462 min=-2.1343 max=+0.3809 deg/s
+  gyro_x     n=259676   mean=-0.0791 sd=0.0511 min=-1.1433 max=+0.6782 deg/s
+  accel_x    n=259676   mean=-0.2899 sd=0.0245 min=-0.4932 max=+0.0703 m/s^2
+  accel_y    n=259676   mean=-1.1801 sd=0.0263 min=-1.3193 max=-0.9189 m/s^2
+  accel_z    n=259676   mean=+10.4498 sd=0.0184 min=+10.2314 max=+10.8105 m/s^2
+  |accel|    n=259676   mean=10.5203 p50=10.5232 sd=0.0203 m/s^2
+```
+
+`pixi run python tools/ubx-dump.py LOG00004.TXT --summary`:
+
+```text
+4773308 bytes
+  junk                       14 bytes (0.000%)
+  nmea                    24242 bytes (0.508%)
+  ubx                   4749052 bytes (99.492%)
+frames:
+  ESF-RAW                 69839
+  GNTXT                     713
+  junk                        1
+NMEA TXT texts:
+     713  txbuf alloc S
+ESF-RAW data types per message (count):
+     69839  [16, 17, 18, 14, 13, 5, 12] = ['accel_x', 'accel_y', 'accel_z', 'gyro_x', 'gyro_y', 'gyro_z', 'gyro_temp']
+  messages whose samples carry different sTtags: 0
+  sTtag first=6525 last=1710103 max seen=16776992; unwrapped span=18480794 ticks over 1 wraps at 2^24 (tick unit not stated in the documents; see measure.md)
+  sTtag step between messages: n=69838 min=156 p1=228 p50=257 p99=515 p99.9=1513 max=1802, still non-increasing=0
+  most common steps: 257 ticks x37889, 258 ticks x15715, 256 ticks x6303, 259 ticks x2790, 255 ticks x927, 514 ticks x618, 228 ticks x576, 235 ticks x553
+  steps over 1.5 x the median (257): 1681 (2.41% of steps), about 2353 messages missing (3.26% of those expected)
+  reserved0 as a little-endian U4: first=2745 last=721221 span=718476, decreasing steps=0; sTtag span / reserved0 span = 25.7222
+ESF-RAW values (scaled):
+  gyro_z     n=69839    mean=+0.0156 sd=0.0418 min=-0.1907 max=+0.2209 deg/s
+  gyro_temp  n=69839    mean=+29.2351 sd=2.4833 min=+20.8600 max=+31.8900 degC
+  gyro_y     n=69839    mean=-0.4481 sd=0.0688 min=-1.4331 max=+0.5259 deg/s
+  gyro_x     n=69839    mean=-0.0664 sd=0.0498 min=-0.3203 max=+0.1980 deg/s
+  accel_x    n=69839    mean=-0.2850 sd=0.0341 min=-0.4893 max=-0.0742 m/s^2
+  accel_y    n=69839    mean=-0.2055 sd=0.0186 min=-0.3633 max=-0.0420 m/s^2
+  accel_z    n=69839    mean=+10.4761 sd=0.0217 min=+10.2451 max=+10.7500 m/s^2
+  |accel|    n=69839    mean=10.4820 p50=10.4849 sd=0.0223 m/s^2
+```
+
+</details>
 
 ## What I learned
 
