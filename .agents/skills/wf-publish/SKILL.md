@@ -27,6 +27,8 @@ before changing them.
 - **Reference.** The milestones page, where a milestone's status changed. For a probe, the ledger
   rows it closed are usually the only page; a probe changes a system page only if what it found
   corrects one.
+- **Write as `authoring.md` says**: one sentence per line, in the site's own voice. The home page
+  says what the site is for; keep it true when an entry changes that.
 - **Drop what is no longer true.** A page describes only the current box. What it replaced stays in
   the archive.
 - **The entry's `index.md`.** Replace its opening paragraph with what the entry did, for a reader of

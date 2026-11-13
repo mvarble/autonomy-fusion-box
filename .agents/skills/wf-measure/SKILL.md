@@ -14,9 +14,10 @@ point of both, so a stage without results cannot be approved.
 
 Run `bin/wf status --expect measure`. If it fails, stop and tell the user what it said.
 
-For a milestone, read the entry's `plan.md`, above all its "What it must measure". For a probe,
-which has no plan, read the ledger rows it sets out to close, their "How we close it", and the
-sources they cite.
+Read `.agents/reference/authoring.md` once per session. For a milestone, read the entry's
+`plan.md`, above all its "What it must measure". For a probe, which has no plan, read the ledger
+rows it sets out to close, their "How we close it", and the sources they cite; a warm-up probe may
+close none.
 
 ## Writing a milestone's measurements
 
@@ -47,44 +48,65 @@ Against the plan's pass marks: what passed, what did not, and what it changes.
 
 ## Writing a probe's measurements
 
-A probe is a record of learning the hardware as much as of the answer. The user is new to hardware
-work and reads these later to see what they did and what they learned, so write it for them.
-Read `.agents/reference/learner.md` first, pitch the explanations to it, and before the stage is
-approved add what this probe showed about what they know and what is still new to them.
+A probe is a lab: a record of learning the hardware as much as of the answer, written so that
+someone new to embedded work could follow it and do it again. The user reads these later to see
+what they did and what they learned, and the site is honest that they are learning (see "What the
+site is for" in `.agents/reference/authoring.md`). Read `.agents/reference/learner.md` first, pitch
+the explanations to it, and before the stage is approved add what this probe showed about what they
+know and what is still new to them.
 
 ```markdown
 ---
-summary: <one sentence: the question and its answer>
+summary: <one sentence: what the lab does, and its headline result>
 ---
 
-## What I set out to check
+<A short opening, in the first person: what the lab sets out to do and why, and a numbered list of
+its steps, each linking its section.>
 
-The ledger rows (by number, linked) and why they matter to the next milestone.
+## The setup
 
-## What I did
+<The hardware (a photo), the instruments and tools, the host and the versions of everything.>
 
-Step by step: the setup, the wiring, the instruments and their settings, the commands and their
-output, the firmware and kernel versions. Quote any script in full. Include what went wrong and
-was retried: a probe that found nothing on the first try teaches the most.
+## 1. <A step, named for what it does>
+
+**What it is for.** Why this step, and where it fits: in the lab, and in the box.
+
+**How it is done.** The wiring, the settings, the commands and any script, quoted in full (in a
+`<details>` block when it is long). Explain the idea behind it the first time it matters.
+
+**What to look for.** What a good result looks like, before it is shown.
+
+**What came out.** The screenshot, photo or pasted output, then what it shows, with every number
+from the run and the number of runs.
+
+**What I learned.** Bullets: each a lesson in bold, then the hardware behind it, linking forward to
+the step that comes back to it.
+
+## 2. …
 
 ## Results
 
-What was seen, with units and the number of tries. Raw output pasted, or where the raw data is.
+A table of what each step checked and found, numbers included, and where the raw data is.
 
-## What I learned
+## What comes next
 
-The answer in plain terms, what surprised, the hardware lesson behind it (why the pin was quiet,
-what the scope trace says about the edge), and what to watch for next time.
-
-## What it closes
-
-Each ledger row, its new status, and anything the probe opened instead.
+The ledger rows it closes (marked MEASURED, linked here), the ones it moves forward, and any it
+opened.
 ```
 
+- **Write the lab as it should be done**, not in the order things happened. Scattered experiments
+  become steps someone could follow; a detour stays only if it teaches.
+- `bin/wf approve` requires a `## Results` section, so keep one even when every step reports its own
+  results.
 - The user does the work at the bench and you help write it up. Ask for what you need: the exact
-  output, a photo, what they tried. Never fill in a step or a reading they did not report.
-- **What I learned** is the point of the entry. Draft it from what they reported, explain the
-  hardware behind it, and ask them to correct it in their own words.
+  output, a screenshot, a photo, what they tried. Never fill in a step or a reading they did not
+  report, and never state as fact what you only recall: check it in a document, or say it is not
+  known.
+- Screenshots of a terminal or an instrument are the best raw record. Copy them into the entry's
+  folder and show them with `ImageFigure`, as `authoring.md` says.
+- **What I learned** is the point of each step. Draft it from what they reported, explain the
+  hardware behind it, and ask them to correct it in their own words; if they have nothing to add,
+  the draft stands.
 - An answer that came out OPEN or surprising is still a result: say so, and add any new question
   to the ledger.
 

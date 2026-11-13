@@ -11,8 +11,9 @@ argument-hint: '<slug> <milestone|probe|decision|chore> [what it is about] [revi
 
 1. Work out the slug (lowercase words joined by hyphens, named after the idea), the kind, a title,
    and any entry it revises from what the user wrote. Ask if the kind is unclear: a **milestone**
-   is one row of the milestones table and ends in measured numbers; a **probe** is one hands-on
-   check of the hardware that closes questions in the ledger and writes no box code; a **decision** is an argued position; a **chore** is a refactor or a
+   is one row of the milestones table and ends in measured numbers; a **probe** is one session at
+   the bench, written up as a lab, that usually closes questions in the ledger (a warm-up that closes
+   none is a probe too) and writes no box code; a **decision** is an argued position; a **chore** is a refactor or a
    tooling change with nothing to measure.
 2. If the current branch is `main`, make a branch for the entry first (`git switch -c <slug>`),
    unless your environment names the branch to work on.
