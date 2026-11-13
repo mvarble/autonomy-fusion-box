@@ -20,7 +20,7 @@ not what an engineer with their title would be expected to know.
 
 ### rtk-inspection (2026-11-13)
 
-Demonstrated, from the story of a first attempt months earlier and from this probe:
+Demonstrated in this probe:
 
 - They worked from a product page to the hookup guide, a sibling board's guide, and u-blox's
   integration manual and interface description, and picked out time tagging as something that would
