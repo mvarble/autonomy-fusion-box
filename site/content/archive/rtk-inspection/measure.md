@@ -18,9 +18,6 @@ summary: The ZED-F9R on the ArduSimple board runs firmware HPS 1.40, protocol ve
 **First, u-center 2 on Windows.** I polled `UBX-MON-VER` there, and used its answer to check the
 reading below.
 
-> [!TODO]
-> u-center 2's version and the Windows version it ran on.
-
 **Then the same poll from Linux, with pyubx2.** The board's USB port enumerates as a serial device,
 and `UBX-MON-VER` is a read-only poll: an 8-byte request with no payload, which changes no
 configuration. The script sends the poll and prints the first `MON-VER` reply, both as raw hex and
