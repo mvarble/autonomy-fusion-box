@@ -89,7 +89,7 @@ Each has a class, an ID and a fixed layout, like `ESF-RAW`, which carries the IM
   The pins are the board's business, and the messages are the chip's.
 - **A sibling board's guide is a start, not an answer.** This board's own silkscreen has the final word on which pin is which.
 - **The messages are not fixed.** What comes out of the chip, and so out of UART1, is whatever it has been configured to send.
-  Out of the box that is a little NMEA text; choosing the messages is my job, and step 2 does it.
+  Out of the box that is a set of NMEA text sentences; choosing the messages is my job, and step 2 does it.
 - **Every message has a definition to read before parsing it.** `ESF-RAW`'s layout is the one this lab ends up decoding.
 
 ## 2. Configuring UART1 in u-center 2
