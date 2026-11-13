@@ -1,0 +1,13 @@
+{
+    "kind": "probe",
+    "stage": "measure",
+    "started": "2026-11-13",
+    "events": [
+        {
+            "date": "2026-11-13",
+            "action": "start",
+            "stage": "measure"
+        }
+    ],
+    "approvals": {}
+}
