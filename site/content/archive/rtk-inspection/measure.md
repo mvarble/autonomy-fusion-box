@@ -1,73 +1,135 @@
 ---
-summary: The ZED-F9R on the ArduSimple board runs firmware HPS 1.40, protocol version 33.40, read from `UBX-MON-VER` over USB; its old OpenLog recordings show `ESF-RAW` carries one 7-sample set per message, 257 time-tag ticks apart, but not yet what a tick is in seconds.
+summary: A first session with the ArduSimple ZED-F9R board. It reads the firmware (HPS 1.40, protocol 33.40) over USB, reads the board's silkscreen, and decodes old OpenLog recordings of the IMU, which give `ESF-RAW`'s framing (one 7-sample set per message, 257 time-tag ticks apart) but not yet its rate in Hz.
 ---
 
 <script>
 	import board from './board.jpg';
 </script>
 
-## What I set out to check
+Before the box can configure the receiver, stamp its data or decode its IMU, it has to know what is
+actually on the bench. This lab is a first session with the ArduSimple ZED-F9R board. It runs four
+checks, each small enough for an afternoon:
 
-- [#1](../../reference/open-questions/index.md#blocking-m1): which firmware the F9R runs. Every
-  configuration key the box will set, and which UBX messages exist, depend on it, so M1's config
-  tool cannot be written against the right interface description until this is known.
-- [#11](../../reference/open-questions/index.md): the IMU sample rate and how `ESF-RAW` frames it.
+1. [how the receiver appears to Linux over USB](#1-how-the-receiver-appears-over-usb);
+2. [which firmware it runs](#2-which-firmware-the-receiver-runs);
+3. [what the board itself says](#3-what-the-board-says), read from its silkscreen;
+4. [what its IMU stream looks like](#4-what-the-imu-stream-looks-like), from recordings made long
+   ago with an SD-card logger.
 
-  How the samples are framed decides how M2's driver splits them into IMU messages. The rate
-  decides the IMU noise model and the bag size.
+Each check follows the same pattern: what to check, why it matters and where it fits in the box,
+how it is done, what came out, and what it taught. Two ledger questions are the targets:
+[#1](../../reference/open-questions/index.md#blocking-m1), the firmware, and
+[#11](../../reference/open-questions/index.md#blocking-m2), the IMU's rate and framing. The checks
+also turn up facts for several others, collected in [What it closes](#what-it-closes).
 
-## What I did
+Two vendor documents carry most of the weight, and their exact revisions matter, because sections
+move between revisions:
 
-**The board.** This is the ArduSimple board in its 3D-printed enclosure, powered over USB. The
-coloured wires are serial connections I set up in u-center 2 a long time ago, when I was trying to
-get GPS, IMU and INS estimates out of the board. They were still in place for this probe.
+- `[ID]` is the u-blox F9 HPS 1.30 Interface Description, UBX-22010984 R03. It defines every UBX
+  message and configuration key.
+- `[IM]` is the ZED-F9R Integration Manual, UBX-20039643. Its URL in the ledger served revision
+  R10 on 2026-11-13. It explains how the receiver behaves.
+
+Every check that talks to the receiver here only reads from it. None changes its configuration.
+
+## The setup
 
 <figure>
-	<img src={board} alt="The ArduSimple board in a black enclosure, with a red, a blue, a yellow and a green wire soldered or plugged into its headers and leaving through the enclosure wall. The u-blox ZED-F9R module sits at the lower right, beside the SMA antenna connector." width="1444" height="1362" />
+	<img src={board} alt="The ArduSimple board in a black enclosure, with a red, a blue, a yellow and a green wire on its headers, leaving through the enclosure wall. The u-blox ZED-F9R module sits at the lower right, beside the SMA antenna connector." width="1444" height="1362" />
 	<figcaption>The board as probed. The F9R module is at the lower right, next to the SMA antenna connector and the POWER + GPS USB-C port.</figcaption>
 </figure>
 
-What the photo shows, read from the silkscreen:
+The board sits in a 3D-printed enclosure and is powered over USB. The four coloured wires are left
+over from an earlier attempt to get GPS, IMU and INS estimates out of it, configured in u-center 2
+long ago. They run to a SparkFun OpenLog, a small board that writes whatever arrives on its serial
+input to a file on an SD card. They were left in place for this lab.
 
-- **The module** is marked `ZED-F9R-01B-00`.
-- **Two USB-C ports.** The one labelled POWER + XBEE is at the upper left and POWER + GPS at the
-  right. The probe used POWER + GPS.
-- **The wires**, all four leaving through the enclosure wall:
-  - **yellow:** `TX1`, on the bottom header;
-  - **green:** `RX1`, beside it;
-  - **red:** 5 V, at the top header's pin above `LED7` (`5V IN/OUT`);
-  - **blue:** ground, at the end of the XBee socket's lower row.
+The host is a laptop running Arch Linux, kernel 7.2.14-arch1-1. The scripts run from the Pixi
+environment at the repository root: Python 3.15.2, pyubx2 1.4.1 and pyserial 3.5. A Windows
+install of u-center 2, u-blox's own tool, served as a cross-check.
 
-  So UART1 and power go to the logger, and the F9R's UART1 output is what it records.
-- **J4, a 6-pin JST connector labelled PIXHAWK + POWER**, at the right edge. Its pins read, from 1
-  to 6: `VIN`, `RX1`, `TX1`, `TPS`, `EVT`, `GND`. So UART1, the timepulse and an event input are on
-  one connector.
-- **The bottom header** also carries `RX2`, `TX2`, `GEOFENCE`, `EXTINT`, `TPS`, `GND`, `RST`,
-  `SDA` and `SCL`. There is a separate `TPS` pad labelled `J9` near the top.
-- **A slide switch labelled XBEE TO GPS UART1 / XBEE TO GPS UART2** picks which of the F9R's UARTs
-  the XBee socket reaches. It is set to XBEE TO GPS UART2, and the socket is empty.
-- **A second slide switch** chooses between `IOREF = 3V3, 5V = OUTPUT` and
-  `IOREF & 5V ARE INPUTS`.
-- **The footprint labelled `BAT`** in the middle of the board, a circle with two pads, has nothing
-  fitted.
-- **LEDs:** `POWER` is lit, and so is `NO RTK`, in red. `PVT` is dark, and the photo was taken
-  indoors. `5V IN/OUT`, `IOREF` and one of the `GPS>XBEE` / `XBEE>GPS` pair are lit as well.
+## 1. How the receiver appears over USB
 
-The other end of the wires is a SparkFun OpenLog, a small board that writes whatever arrives on its
-serial input to a file on an SD card. Its `config.txt`, verbatim:
+**What to check.** When the board is plugged in, which device file appears, which kernel driver
+handles it, and whether there is anything between the F9R and the USB cable.
 
-```text
-115200,26,3,0,1,1,0
-baud,escape,esc#,mode,verb,echo,ignoreRX
+**Why it matters.** Everything the box sends to and reads from the receiver goes through this
+port. The host process that will own it ([#5](../../reference/open-questions/index.md#blocking-m1))
+needs a name for it that survives reboots and replugging, and permission to open it. Two very
+different things can sit behind a USB serial port. One is the receiver's own USB. The other is a
+USB-to-UART bridge chip wired to one of its UART pins, which brings its own baud rate, its own
+buffering and its own latency.
+
+**How it is done.** Linux has two conventions for serial ports over USB, and the device name tells
+them apart.
+
+- **`/dev/ttyACM*`** comes from the `cdc_acm` driver. It binds to any device whose interface
+  declares USB class 02 (Communications), subclass 02 (Abstract Control Model), the standard USB
+  class for a serial device. It matches on the class, not on a vendor, so no vendor driver is
+  needed. Because the class was designed for modems, desktop services such as ModemManager may
+  probe a new `ttyACM` device, and on the Pi it is worth telling them to leave it alone.
+- **`/dev/ttyUSB*`** comes from the `usbserial` family of drivers for bridge chips (FTDI, CP210x,
+  CH340). These match on vendor and product IDs.
+
+The numbers in either name follow the order in which devices appear, so they are not stable. udev
+adds stable links under `/dev/serial/by-id/`, built from the device's vendor, product and serial
+strings.
+
+The board has two USB-C ports, labelled POWER + XBEE and POWER + GPS. The cable went to POWER +
+GPS, next to the antenna connector. The kernel log as it was plugged in, and udev's view of the
+device, can both be read without touching the receiver:
+
+```sh
+journalctl -k -b | grep -iE 'cdc_acm|ttyACM|1546'
+udevadm info -q property -n /dev/ttyACM0
+ls -l /dev/serial/by-id/
 ```
 
-**First, u-center 2 on Windows.** I polled `UBX-MON-VER` there, and used its answer to check the
-reading below.
+**What came out.**
 
-**Then the same poll from Linux, with pyubx2.** The board's USB port enumerates as a serial device,
-and `UBX-MON-VER` is a read-only poll: an 8-byte request with no payload, which changes no
-configuration. The script sends the poll and prints the first `MON-VER` reply, both as raw hex and
-parsed:
+```text
+usb 1-1.1.3: New USB device found, idVendor=1546, idProduct=01a9, bcdDevice= 1.00
+cdc_acm 1-1.1.3:1.0: ttyACM0: USB ACM device
+```
+
+- **Vendor:** `1546` is u-blox.
+- **Interfaces:** udev lists them as `:020201:0a00ff:`. That is a communications interface (class
+  02, subclass 02, protocol 01) and a CDC data interface (class 0a), which carries the bytes.
+- **Stable name:** `/dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_GNSS_receiver-if00`.
+- **Permissions:** the device node belongs to group `uucp`.
+
+**What I learned.**
+- **POWER + GPS is the F9R's native USB**, with no bridge chip in between. So its "baud rate" is a
+  formality: a CDC-ACM device receives it as a USB request and is free to ignore it.
+- **Configure the box with the `by-id` name, never `ttyACM0`.** The name carries no serial number,
+  though, so a second u-blox device on the same host would get the same one.
+- **On the Pi**, the host process's user needs group `uucp`, or a udev rule.
+
+## 2. Which firmware the receiver runs
+
+**What to check.** The receiver's firmware and protocol versions, as the receiver itself reports
+them in `UBX-MON-VER`.
+
+**Why it matters.** This is [#1](../../reference/open-questions/index.md#blocking-m1), and the
+first fact M1 builds on. The configuration keys the box will set, the UBX messages that exist and
+their layouts all depend on the firmware. Some behaviour does too: UBX output on UART2, for
+example, exists only from HPS 1.30 `[IM §3.1.3]`. The config tool will set keys by name with
+`VALSET` and read them back with `VALGET`, against the interface description for this firmware,
+and it will check `MON-VER` on every start before it does anything else.
+
+**How it is done.** UBX is u-blox's binary protocol. Every frame has the same shape:
+
+| bytes   | content                                                               |
+| ------- | --------------------------------------------------------------------- |
+| 2       | sync, `b5 62`                                                         |
+| 1 + 1   | message class and ID                                                  |
+| 2       | payload length, little-endian                                         |
+| n       | payload                                                               |
+| 2       | checksum: an 8-bit Fletcher sum over class, ID, length and payload    |
+
+To *poll* a message, the host sends that message with an empty payload, and the receiver answers
+with the full message. A `MON-VER` poll is 8 bytes, `b5 62 0a 04 00 00 0e 34`, and changes
+nothing on the receiver. The script sends it and prints the reply both as raw hex and parsed:
 
 ```python
 # tools/get-firmware.py
@@ -85,53 +147,146 @@ with serial.Serial(sys.argv[1], 38400, timeout=3) as s:  # baud is ignored on US
             break
 ```
 
-It runs from the Pixi environment at the repository root (`pixi run get-firmware <path>`): Python
-3.15.2, pyubx2 1.4.1 and pyserial 3.5, on Arch Linux, kernel 7.2.14-arch1-1. `protfilter=2` makes
-the reader skip the NMEA sentences that stream on the same port, so the reply is not lost among
-them.
+It runs as `pixi run get-firmware /dev/ttyACM0`. The same USB port also streams NMEA text, and
+`protfilter=2` makes the reader skip it so the reply is not lost among the sentences. I ran it many
+times without keeping count. u-center 2 on Windows, polling the same message, gave the
+cross-check.
 
-The board has two USB-C connectors. The cable went to the one labelled **POWER + GPS**, next to the
-antenna connector. The board came up as `/dev/ttyACM0` (`pixi run get-firmware /dev/ttyACM0`). The
-kernel log from when it was plugged in shows that this connector is the F9R's own USB, handled by
-the generic CDC-ACM driver, with no USB-serial bridge chip in between:
+**What came out.** The reply, exactly as printed (228 bytes):
 
 ```text
-usb 1-1.1.3: New USB device found, idVendor=1546, idProduct=01a9, bcdDevice= 1.00
-cdc_acm 1-1.1.3:1.0: ttyACM0: USB ACM device
+b5620a04dc0045585420434f524520312e3030202866386239303129000000000000000030303139303030300000524f4d20424153452030783131384232303630000000000000000000000046575645523d48505320312e34300000000000000000000000000000000050524f545645523d33332e343000000000000000000000000000000000004d4f443d5a45442d463952000000000000000000000000000000000000004750533b474c4f3b47414c3b424453000000000000000000000000000000534241533b515a535300000000000000000000000000000000000000000006f1
 ```
 
-udev reports the interfaces as `:020201:0a00ff:`: a communications interface with class 02, subclass
-02 (ACM) and protocol 01, and a CDC data interface with class 0a. Its stable name is
-`/dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_GNSS_receiver-if00`. The node is owned by
-group `uucp`, so the user running the script needs to be in that group.
+It is worth decoding one frame by hand, because every later UBX bug is easier to find for having
+done it once:
 
-I ran the script many times without keeping count. The reply quoted under Results is from one of
-those runs.
+- `b5 62` is the sync, and `0a 04` is the class and ID of `MON-VER`.
+- `dc 00` is the payload length, little-endian: 220 bytes. That matches the bytes received, and
+  fits a 30-byte `swVersion`, a 10-byte `hwVersion` and six 30-byte extensions
+  (30 + 10 + 6 × 30 = 220).
+- The checksum over class, ID, length and payload comes out to `06 f1`, the last two bytes
+  received.
 
-**Along the way, picocom.** Opening the same port in picocom showed NMEA sentences flowing on USB
-and no visible UBX. That is the board's stored configuration rather than a fault: I had earlier
-configured UBX output on the board's UART pins, not on USB.
+Each field is NUL-padded ASCII, so the version can even be read straight off a hex dump:
 
-**Then the OpenLog's recordings.** The SD card held four logs, `LOG00001.TXT` to `LOG00004.TXT`,
-from that earlier setup. I don't know when they were recorded or for how long, and the GPS antenna
-was most likely not connected for any of them. They are what the F9R sent out of UART1, byte for
-byte, with no timestamps of the OpenLog's own.
+| field       | value                    |
+| ----------- | ------------------------ |
+| `swVersion` | `EXT CORE 1.00 (f8b901)` |
+| `hwVersion` | `00190000`               |
+| extension 1 | `ROM BASE 0x118B2060`    |
+| extension 2 | `FWVER=HPS 1.40`         |
+| extension 3 | `PROTVER=33.40`          |
+| extension 4 | `MOD=ZED-F9R`            |
+| extension 5 | `GPS;GLO;GAL;BDS`        |
+| extension 6 | `SBAS;QZSS`              |
 
-pyubx2 1.4.1 parses `ESF-RAW` but leaves each data word as raw bytes, so I wrote
-`tools/ubx-dump.py`. It frames the byte stream itself, so that every byte is counted as a good UBX
-frame, a bad-checksum frame, an NMEA sentence or a stray byte, and it decodes `ESF-RAW` from the
-documents:
+u-center 2 reported the same value in every field.
+
+**What I learned.**
+- **The receiver runs HPS 1.40, protocol 33.40.** The interface description in the ledger, `[ID]`,
+  is the HPS 1.30 one. So every key and message the box uses has to be checked against the HPS 1.40
+  edition before M1 relies on it. HPS 1.40 does meet the "HPS 1.30 or later" condition for UBX
+  output on UART2 `[IM §3.1.3]`.
+- **The firmware has been updated since the module was made.** The module is marked
+  `ZED-F9R-01B-00`, and `[IM]`'s list of products gives that type HPS 1.20. HPS 1.40 belongs to
+  `ZED-F9R-04B-00` in the same list. So the module's marking says nothing reliable about its
+  firmware, and `MON-VER` is the only way to know.
+- **The version is one 8-byte poll away, from any host, with no vendor tool.**
+- **USB and the UART pins are configured separately.** Opening the USB port in picocom, a minimal
+  serial terminal, showed NMEA sentences and no UBX. That is not a fault. Each port has its own
+  output protocols and its own rate for each message. This board's UBX output had been set up on
+  UART1, for the logger, and USB had been left with the default NMEA output. A binary UBX frame
+  would barely show in a terminal anyway: a stray `µb`, then control characters.
+
+## 3. What the board says
+
+**What to check.** Read the board itself: which pins carry which signals, how the switches are set,
+which LEDs are lit, and what is fitted.
+
+**Why it matters.** The box will wire the F9R's timepulse to the Pi's PPS input and a UART to the
+Pi. A wrong pin is at best a silent input and at worst a damaged GPIO, since the Pi's GPIOs are not
+5 V tolerant `[RPI-HW]` (see the ledger's sources). The silkscreen is the cheapest evidence there is, and it is the first step of
+[#2](../../reference/open-questions/index.md#blocking-m1), where TIMEPULSE and EXTINT are on this
+board. Product pages and hookup guides often describe another revision of the board.
+
+**How it is done.** From the photo above, enlarged where the labels are small.
+
+**What came out.**
+
+- **The module** is marked `ZED-F9R-01B-00`.
+- **The wires**, all four leaving through the enclosure wall to the OpenLog:
+  - **yellow:** `TX1`, on the bottom header;
+  - **green:** `RX1`, beside it;
+  - **red:** 5 V, at the top header's pin above `LED7` (`5V IN/OUT`);
+  - **blue:** ground, at the end of the XBee socket's lower row.
+- **J4, a 6-pin JST connector labelled PIXHAWK + POWER**, is at the right edge. Its pins read, from
+  1 to 6: `VIN`, `RX1`, `TX1`, `TPS`, `EVT`, `GND`.
+- **The bottom header** also carries `RX2`, `TX2`, `GEOFENCE`, `EXTINT`, `TPS`, `GND`, `RST`,
+  `SDA` and `SCL`. A separate `TPS` pad, labelled `J9`, sits near the top.
+- **A slide switch labelled XBEE TO GPS UART1 / XBEE TO GPS UART2** picks which of the F9R's UARTs
+  the XBee socket reaches. It is set to UART2, and the socket is empty.
+- **A second slide switch** chooses between `IOREF = 3V3, 5V = OUTPUT` and
+  `IOREF & 5V ARE INPUTS`.
+- **The footprint labelled `BAT`**, a circle with two pads in the middle of the board, has nothing
+  fitted.
+- **LEDs:** `POWER` is lit, and so is `NO RTK`, in red. `PVT` is dark, and the photo was taken
+  indoors. `5V IN/OUT`, `IOREF` and one of the `GPS>XBEE` / `XBEE>GPS` pair are lit too.
+
+The OpenLog's `config.txt`, verbatim:
+
+```text
+115200,26,3,0,1,1,0
+baud,escape,esc#,mode,verb,echo,ignoreRX
+```
+
+**What I learned.**
+- **The timepulse is on at least three places**, all labelled `TPS`: J4, the bottom header and the
+  `J9` pad. An event input is on J4 (`EVT`) and the header (`EXTINT`). Which one the Pi should use,
+  and whether it is clean there, is for the AD3 to say in #2 and #3. The labels only say where to
+  put the probe.
+- **UART1 is shared.** It is on J4 and on the bottom header, and as found it fed the OpenLog at
+  115200 baud. The default is 38400 `[IM §3.1.3]`, so the old configuration changed it. UART2 went
+  to the empty XBee socket. That is the shape [#14](../../reference/open-questions/index.md#blocking-m2)
+  asks about.
+- **Green carries the OpenLog's output into the F9R's `RX1`.** Whatever the OpenLog transmits
+  arrives at the receiver's UART1 input. If UART1 goes to the Pi, that wire comes off first.
+- **The old configuration is most likely in flash.** RAM settings are lost at power-off, and BBR
+  keeps them only while a backup supply holds `[IM §3.1]`. The `BAT` footprint has nothing fitted,
+  yet UBX still comes out of UART1. A `VALGET` of each layer would settle it, which is
+  [#9](../../reference/open-questions/index.md#blocking-m1). Before the box changes anything, those
+  stored layers should be read back and recorded, so that what the board held before is known.
+
+## 4. What the IMU stream looks like
+
+**What to check.** How `UBX-ESF-RAW`, the message that carries the F9R's raw IMU samples, frames
+them, and at what rate it comes.
+
+**Why it matters.** This is [#11](../../reference/open-questions/index.md#blocking-m2), and it
+shapes M2. The framing decides how the driver turns messages into `sensor_msgs/Imu`: one message
+per sample, or samples matched up across messages. The rate decides the noise model's bandwidth,
+the Allan variance's shortest averaging time and the size of a bag. The time tag, `sTtag`, is what
+[#10](../../reference/open-questions/index.md#blocking-m2) must map to GNSS time, so how it
+counts matters to the stamping rule.
+
+**How it is done.** The OpenLog's SD card held four logs, `LOG00001.TXT` to `LOG00004.TXT`, from
+the earlier setup. Each is exactly what UART1 sent, byte for byte, with no timestamps of the
+OpenLog's own. When they were recorded and for how long is not known, and the GPS antenna was most
+likely not connected for any of them.
+
+pyubx2 1.4.1 recognises `ESF-RAW` but leaves its data words as raw bytes, so I wrote
+`tools/ubx-dump.py`. It frames the byte stream itself, rather than trusting a parser to skip what
+it does not understand. Every byte ends up counted as one of four things: a good UBX frame, a frame
+with a bad checksum, an NMEA sentence, or a stray byte. A gap or a corrupt patch in a log therefore
+shows up instead of vanishing. It decodes `ESF-RAW` from the documents:
 
 - the payload is a 4-byte reserved field, then repeated 8-byte groups, each a data word and a U4
   `sTtag` (`[ID §3.11.4]`);
 - in the data word, bits 23…0 are `dataField` and bits 31…24 are `dataType` (`[ID §3.11.4]`);
-- the types, their scales and their signedness come from `[IM]` Table 15 (§3.2.7.5).
-
-`[ID]` is the u-blox F9 HPS 1.30 Interface Description, UBX-22010984 R03. `[IM]` is the ZED-F9R
-Integration Manual, UBX-20039643, which its URL in the ledger served as revision R10 on 2026-11-13.
+- the types, their scales and their signedness are in `[IM]` Table 15 (§3.2.7.5).
 
 `pixi run python tools/ubx-dump.py FILE` prints every message, `--only ESF-RAW` filters, and
-`--summary` prints the totals quoted below. I ran `--summary` once on each log.
+`--summary` prints the totals below. I ran `--summary` once on each log.
 
 <details>
 <summary><code>tools/ubx-dump.py</code>, in full</summary>
@@ -430,41 +585,7 @@ if __name__ == "__main__":
 
 </details>
 
-## Results
-
-The reply, exactly as the script printed it (228 bytes):
-
-```text
-b5620a04dc0045585420434f524520312e3030202866386239303129000000000000000030303139303030300000524f4d20424153452030783131384232303630000000000000000000000046575645523d48505320312e34300000000000000000000000000000000050524f545645523d33332e343000000000000000000000000000000000004d4f443d5a45442d463952000000000000000000000000000000000000004750533b474c4f3b47414c3b424453000000000000000000000000000000534241533b515a535300000000000000000000000000000000000000000006f1
-```
-
-I checked the frame by hand as well as through pyubx2:
-
-- `b5 62` is the sync, and `0a 04` is the class and ID of `MON-VER`.
-- `dc 00` is the payload length, little-endian: 220 bytes. That matches the bytes received, and
-  fits the layout of a 30-byte `swVersion`, a 10-byte `hwVersion`, then six 30-byte extensions
-  (30 + 10 + 6 × 30 = 220).
-- The checksum, the 8-bit Fletcher sum over class, ID, length and payload, comes out to `06 f1`, the
-  last two bytes received.
-
-Each field is NUL-padded ASCII:
-
-| field       | value                    |
-| ----------- | ------------------------ |
-| `swVersion` | `EXT CORE 1.00 (f8b901)` |
-| `hwVersion` | `00190000`               |
-| extension 1 | `ROM BASE 0x118B2060`    |
-| extension 2 | `FWVER=HPS 1.40`         |
-| extension 3 | `PROTVER=33.40`          |
-| extension 4 | `MOD=ZED-F9R`            |
-| extension 5 | `GPS;GLO;GAL;BDS`        |
-| extension 6 | `SBAS;QZSS`              |
-
-u-center 2 reported the same value in every field.
-
-### The OpenLog recordings
-
-`--summary` on each log:
+**What came out.** Every byte of every log is accounted for:
 
 | log            |      bytes | `ESF-RAW` | `GNTXT` | bad-checksum frames | stray bytes |
 | -------------- | ---------: | --------: | ------: | ------------------: | ----------: |
@@ -473,59 +594,57 @@ u-center 2 reported the same value in every field.
 | `LOG00003.TXT` | 17 748 762 |   259 676 |   2 670 |                   0 |          14 |
 | `LOG00004.TXT` |  4 773 308 |    69 839 |     713 |                   0 |          14 |
 
-Every byte is accounted for:
-
 - **The stray bytes** in each log are its last frame, cut off: the file ends partway through an
   `ESF-RAW` that starts `b5 62 10 03 3c 00`.
-- **Every `GNTXT` sentence** reads `$GNTXT,01,01,00,txbuf alloc S*12`. Neither document I searched
-  explains that text.
+- **Every `GNTXT` sentence** reads `$GNTXT,01,01,00,txbuf alloc S*12`. Neither document explains
+  that text.
 - **No other message** is in any log.
 
-**Framing.** All 906 537 `ESF-RAW` messages have the same seven samples, in the same order:
+*Framing.* All 906 537 `ESF-RAW` messages have the same seven samples, in the same order:
 
-| `dataType` | meaning (`[IM]` Table 15)       | scale         |
-| ---------: | ------------------------------- | ------------- |
-|         16 | x-axis accelerometer            | m/s² · 2⁻¹⁰   |
-|         17 | y-axis accelerometer            | m/s² · 2⁻¹⁰   |
-|         18 | z-axis accelerometer            | m/s² · 2⁻¹⁰   |
-|         14 | x-axis gyroscope                | deg/s · 2⁻¹²  |
-|         13 | y-axis gyroscope                | deg/s · 2⁻¹²  |
-|          5 | z-axis gyroscope                | deg/s · 2⁻¹²  |
-|         12 | gyroscope temperature           | °C · 10⁻²     |
+| `dataType` | meaning (`[IM]` Table 15) | scale        |
+| ---------: | ------------------------- | ------------ |
+|         16 | x-axis accelerometer      | m/s² · 2⁻¹⁰  |
+|         17 | y-axis accelerometer      | m/s² · 2⁻¹⁰  |
+|         18 | z-axis accelerometer      | m/s² · 2⁻¹⁰  |
+|         14 | x-axis gyroscope          | deg/s · 2⁻¹² |
+|         13 | y-axis gyroscope          | deg/s · 2⁻¹² |
+|          5 | z-axis gyroscope          | deg/s · 2⁻¹² |
+|         12 | gyroscope temperature     | °C · 10⁻²    |
 
 In every message all seven samples carry the same `sTtag`.
 
-**The step in `sTtag` from one message to the next**, in ticks:
+*The step in `sTtag` from one message to the next*, in ticks:
 
-| log            | steps   |  min |  p1 |  p50 |  p99 | p99.9 |   max | steps over 1.5 × p50 | messages missing, about |
-| -------------- | ------- | ---: | --: | ---: | ---: | ----: | ----: | -------------------: | ----------------------: |
-| `LOG00001.TXT` | 2 627   |  156 | 228 |  257 |  514 | 1 546 | 1 801 |        49 (1.87 %)  |              71 (2.63 %) |
-| `LOG00002.TXT` | 574 393 |  156 | 228 |  257 |  515 | 1 543 | 2 059 |    13 994 (2.44 %)  |          22 087 (3.70 %) |
-| `LOG00003.TXT` | 259 675 |  158 | 228 |  257 |  515 | 1 520 | 2 059 |     6 387 (2.46 %)  |           9 125 (3.39 %) |
-| `LOG00004.TXT` | 69 838  |  156 | 228 |  257 |  515 | 1 513 | 1 802 |     1 681 (2.41 %)  |           2 353 (3.26 %) |
+| log            | steps   | min |  p1 | p50 | p99 | p99.9 |   max | steps over 1.5 × p50 | messages missing, about |
+| -------------- | ------- | --: | --: | --: | --: | ----: | ----: | -------------------: | ----------------------: |
+| `LOG00001.TXT` | 2 627   | 156 | 228 | 257 | 514 | 1 546 | 1 801 |          49 (1.87 %) |             71 (2.63 %) |
+| `LOG00002.TXT` | 574 393 | 156 | 228 | 257 | 515 | 1 543 | 2 059 |      13 994 (2.44 %) |         22 087 (3.70 %) |
+| `LOG00003.TXT` | 259 675 | 158 | 228 | 257 | 515 | 1 520 | 2 059 |       6 387 (2.46 %) |          9 125 (3.39 %) |
+| `LOG00004.TXT` | 69 838  | 156 | 228 | 257 | 515 | 1 513 | 1 802 |       1 681 (2.41 %) |          2 353 (3.26 %) |
 
 - **The usual step is 255 to 259 ticks.** 257 is the most common in every log.
-- **Steps near 514, 771 and so on are whole multiples of it.** I read those as messages missing from
-  the stream, since no frame is corrupt.
+- **Steps near 514, 771 and so on are whole multiples of it.** With no frame corrupt, these are
+  messages missing from the stream.
 - **The "messages missing" column** rounds each long step to a multiple of the median and counts
   the multiples beyond one.
 
-**`sTtag` wraps.** It runs backwards 9, 4 and 1 times in `LOG00002`, `LOG00003` and `LOG00004`,
-and none in `LOG00001`. Each time, the backward step is 2²⁴ less a normal step, so although the
-field is typed U4, it behaves as a 24-bit counter. The largest value seen is 16 776 997, just under
-2²⁴ = 16 777 216. The script unwraps these steps before the statistics above.
+*`sTtag` wraps.* It runs backwards 9, 4 and 1 times in `LOG00002`, `LOG00003` and `LOG00004`, and
+never in `LOG00001`. Each time, the backward step is 2²⁴ less a normal step. So although the field
+is typed U4, it behaves as a 24-bit counter. The largest value seen is 16 776 997, just under
+2²⁴ = 16 777 216. The script unwraps these steps before computing the statistics above.
 
-**`reserved0` counts too.** As a little-endian U4 it never decreases in any log. Over each log,
-the unwrapped `sTtag` span divided by the `reserved0` span is 25.7259, 25.7205, 25.7194 and
-25.7222. So two counters in the message keep a steady ratio of about 25.72. The ratio also comes out
-right only when the wraps are unwrapped, which confirms them.
+*`reserved0` counts too.* Read as a little-endian U4, it never decreases in any log. Over each log,
+the unwrapped `sTtag` span divided by the `reserved0` span is 25.7259, 25.7205, 25.7194 and 25.7222.
+So the message carries two counters with a steady ratio of about 25.72. The ratio comes out that
+steady only once the wraps are unwrapped, which confirms them.
 
-**Two regularities I can't explain.**
+*Two regularities I can't explain.*
 - All four logs start at `sTtag` 6 518 to 6 527, and `reserved0` 2 745 to 2 819.
 - `LOG00002`, `LOG00003` and `LOG00004` all end with `sTtag` between 1 710 103 and 1 710 362, after
   different numbers of wraps.
 
-**The values** (means over each log; full spread in each summary):
+*The values* (means over each log; the spread is in each summary):
 
 | log            | \|accel\| (m/s²) | `gyro_x` (deg/s) | `gyro_y` (deg/s) | `gyro_z` (deg/s) | gyro temp (°C) |
 | -------------- | ---------------: | ---------------: | ---------------: | ---------------: | -------------: |
@@ -534,9 +653,9 @@ right only when the wraps are unwrapped, which confirms them.
 | `LOG00003.TXT` |          10.5203 |          −0.0791 |          −0.4315 |          +0.0245 | 21.00 to 34.89 |
 | `LOG00004.TXT` |          10.4820 |          −0.0664 |          −0.4481 |          +0.0156 | 20.86 to 31.89 |
 
-**Where the raw data is.** Nowhere any more. I copied the logs off the SD card to look at them,
-and deleted the copies once this was written. The four `--summary` outputs below, from
-`tools/ubx-dump.py` as committed, are the record. Every number in this section comes from them.
+*Where the raw data is.* Nowhere any more. The logs were copied off the SD card for this lab and the
+copies deleted afterwards. The four `--summary` outputs below, from `tools/ubx-dump.py` as
+committed, are the record. Every number in this section comes from them.
 
 <details>
 <summary>The four summaries, verbatim</summary>
@@ -671,65 +790,60 @@ ESF-RAW values (scaled):
 
 </details>
 
-## What I learned
-
-- **The firmware is HPS 1.40, protocol 33.40.** The ledger's interface description `[ID]` is the
-  HPS 1.30 one, so every key the box sets has to be checked against the HPS 1.40 interface
-  description instead. HPS 1.40 does meet the "HPS 1.30 or later" condition for UBX output on
-  UART2 `[IM §3.1.3]`.
-- **A receiver's version is one poll away, and needs no vendor tool.** The same 8 bytes work from
-  any host, which is what M1's config tool will do on every start.
-- **USB and the UART pins are configured separately.** Each port has its own output protocols and
-  its own per-message rates, which is why USB showed only NMEA while the UART carries UBX.
-- **The board is not at factory settings.** UBX still comes out of the UART pins from the
-  configuration I made long ago. Settings in RAM are lost when power goes. BBR keeps them only
-  while a backup supply holds, and the `BAT` footprint has nothing fitted. So the configuration is
-  most likely in flash. #9 asks exactly this, and reading the layers back with `VALGET` would
-  answer it. Before the box changes anything, those stored layers should be read back and recorded,
-  so that what the board was set to before the box is known.
-
-- **The firmware has been updated since the module was made.** The module is marked
-  `ZED-F9R-01B-00`, and `[IM]` lists that type with HPS 1.20. HPS 1.40 belongs to `ZED-F9R-04B-00`
-  in the same table. Someone, at ArduSimple or earlier me, flashed newer firmware.
-- **`ESF-RAW` is one complete IMU sample per message.** Three accelerometer axes, three gyro axes
-  and the gyro temperature share one `sTtag`, so M2's driver can turn each message into one
-  `sensor_msgs/Imu` without matching samples across messages. That matches what `[IM §3.2.7.6]`
+**What I learned.**
+- **Each `ESF-RAW` message is one complete IMU sample.** Three accelerometer axes, three gyro axes
+  and the gyro temperature share one `sTtag`. So M2's driver can turn each message into one
+  `sensor_msgs/Imu`, without matching samples across messages. That is what `[IM §3.2.7.6]`
   promises: "one sample of every data type per message".
-- **`sTtag` is a 24-bit counter in a 32-bit field.** Anything that maps `sTtag` to GNSS time has to
+- **`sTtag` is a 24-bit counter in a 32-bit field.** Anything that maps it to GNSS time has to
   unwrap it, and it wraps every 2²⁴ ticks. How long that is in seconds is still unknown.
-- **The rate in Hz is not known yet.** The logs carry no clock of the OpenLog's, and neither
-  document gives the unit of `ESF-RAW.sTtag`. The 1 ms resolution `[IM §3.2.5.2]` states is for
-  `ESF-MEAS`, not `ESF-RAW`. One host-clocked capture, the unwrapped `sTtag` span over wall-clock
-  time, would give both the tick and the rate. Counting messages per second would undercount by the
-  dropped messages.
-- **About 3 % of the messages never reached the card.** That is with zero corrupt frames, at 115200
-  baud, which tells me UART1 was set to 115200 to match the OpenLog. The default is 38400
-  `[IM §3.1.3]`. The `txbuf alloc S` warnings look related, but they don't line up with the gaps,
-  so I can't say what they mean. Whatever records `ESF-RAW` has to expect gaps and detect them from
-  `sTtag`, not assume a fixed rate.
-- **The accelerometer reads high.** The magnitude of the acceleration vector, averaged over each
-  log, is 10.44 to 10.52 m/s², where gravity alone would give about 9.8. That is raw data, uncorrected for scale or bias, and the gyro
-  y-axis sits at about −0.43 to −0.49 deg/s. Neither is a calibration, but both are what M6 will
-  have to remove.
+- **The rate in Hz is not known yet.** The logs carry no clock of their own, and neither document
+  gives the unit of `ESF-RAW.sTtag`. The 1 ms resolution in `[IM §3.2.5.2]` is stated for
+  `ESF-MEAS`, not `ESF-RAW`. The way to close it is one capture with host timestamps. The
+  unwrapped `sTtag` span over the wall-clock span gives the tick, and from it the rate. Counting
+  messages per second would come out low, by however many messages are dropped.
+- **About 3 % of the messages never reached the card, with no frame corrupt.** So whatever records
+  `ESF-RAW` has to expect gaps and find them from `sTtag`, not assume a fixed rate. The
+  `txbuf alloc S` warnings look related, but they don't line up with the gaps, so I can't yet say
+  what they mean.
+- **Raw means raw.** The magnitude of the acceleration, averaged over each log, is 10.44 to
+  10.52 m/s², where gravity alone would give about 9.8. The gyro's y-axis sits at about −0.43 to
+  −0.49 deg/s. Neither is corrected in `ESF-RAW`. Both are what calibration (M6) and the Allan
+  variance (M2) will have to account for.
+- **Decode with every byte accounted for.** A parser that silently skips what it can't read would
+  have hidden the dropped messages and the truncated last frame.
 
 > [!TODO]
-> Correct this in your own words: what surprised you, and what you would do differently.
+> Correct the "What I learned" sections in your own words: what surprised you, and what you would
+> do differently. Do you know who flashed HPS 1.40?
+
+## What to try next
+
+- **The IMU rate (#11).** Capture `ESF-RAW` with host timestamps and divide the unwrapped `sTtag`
+  span by the wall-clock span. UART1 can be read from a USB-serial adapter on `TX1`, listening
+  alongside the OpenLog without changing anything. Putting `ESF-RAW` on USB instead would take a
+  `VALSET`, in RAM only.
+- **The stored configuration (#9).** `VALGET` each layer (RAM, BBR, flash, default) for the port,
+  protocol and message-rate keys, and record what the board holds before the box changes it.
+- **The dropped messages (#33).** Record `UBX-MON-COMMS` alongside `ESF-RAW` and see whether the
+  drops follow the transmit buffer.
 
 ## What it closes
 
 - [#1](../../reference/open-questions/index.md#blocking-m1): **MEASURED**, HPS 1.40, protocol
   33.40.
-- Opens [#32](../../reference/open-questions/index.md#blocking-m1): every key the box sets has yet to
-  be checked against the HPS 1.40 interface description, which is not yet in the ledger's sources.
+- Opens [#32](../../reference/open-questions/index.md#blocking-m1): every key the box sets has yet
+  to be checked against the HPS 1.40 interface description, which is not yet in the ledger's
+  sources.
+- [#11](../../reference/open-questions/index.md#blocking-m2) stays **OPEN**. The framing is
+  answered: one sample of each of the seven types per message, with one shared `sTtag`, and a usual
+  step of 257 ticks. The rate in Hz waits for a host-clocked capture.
 - [#2](../../reference/open-questions/index.md#blocking-m1) stays **OPEN**, but the silkscreen
   answers its first step. `TPS` and `EVT` are on J4, the PIXHAWK + POWER connector, and `TPS` and
   `EXTINT` are on the bottom header. Probing the pin with the AD3 is still to come.
 - [#14](../../reference/open-questions/index.md#blocking-m2) stays **OPEN**. On this board, UART1
   is on both J4 and the bottom header, and a switch connects the XBee socket to UART1 or UART2. As
   found, the OpenLog was on UART1 and the switch gave the empty XBee socket UART2.
-- [#11](../../reference/open-questions/index.md#blocking-m2) stays **OPEN**. The framing is
-  answered: one sample of each of the seven types per message, with one shared `sTtag`, the usual
-  step 257 ticks. The rate in Hz waits for a host-clocked capture.
 - [#10](../../reference/open-questions/index.md#blocking-m2) and
   [#13](../../reference/open-questions/index.md#blocking-m2) stay **OPEN**, with one new fact for
   both: `sTtag` wraps at 2²⁴.
