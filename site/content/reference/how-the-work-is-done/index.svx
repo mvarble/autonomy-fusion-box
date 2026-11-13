@@ -19,7 +19,7 @@ The work of a stage is usually done by a coding agent driven with the `/wf-…` 
 | --- | --- | --- |
 | **decision** | a position the project takes, argued in prose | writeup, publish |
 | **milestone** | one row of the [milestones](../milestones/), ending in numbers | plan, build, measure, publish |
-| **probe** | one hands-on check of the hardware, closing open questions | measure, publish |
+| **probe** | a session at the bench, written as a lab, usually closing open questions | measure, publish |
 | **chore** | a refactor or tooling change with nothing to measure | plan, build, publish |
 
 ## The flow
