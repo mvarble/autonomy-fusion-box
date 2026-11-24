@@ -1,5 +1,5 @@
 ---
-summary: The box has no separate SD logger; everything, the raw UBX stream for PPK included, is recorded on the Pi, which reaches the receiver over USB alone, and the Pi's microSD holds the data until a measurement says it cannot.
+summary: The box has no separate SD logger; the Pi reaches the receiver over USB alone, with UART1's output turned off, and records everything, the raw IMU and GNSS observations included, into its bags and a raw host log on its microSD, until a measurement says the card cannot keep up.
 ---
 
 ## Context
@@ -10,7 +10,7 @@ The [rtk-inspection](../rtk-inspection/measure.md) lab used a SparkFun OpenLog i
 
 Two recorders mean two wirings, two port configurations and two files to line up afterwards.
 They also left a question in the ledger, [#14](../../reference/open-questions/#blocking-m2), whether the logger and the Pi conflict on the receiver's ports.
-Meanwhile the [foundations](../foundations/writeup.md) entry had already given the Pi its own path to the receiver: `host/ubx_mux` owns the receiver's USB port, logs the raw UBX stream, feeds chrony and forwards bytes to the ROS driver.
+Meanwhile the [foundations](../foundations/writeup.md) entry had already given the Pi its own path to the receiver: `host/ubx_mux` owns the receiver's USB port, feeds chrony and forwards bytes to the ROS driver, and the [M1 draft plan](../../reference/milestones/#m1-draft-plan) has it log the raw UBX stream as well.
 The logger only duplicates that log, from a different port, on a card with no clock.
 
 ## Decision
@@ -21,7 +21,7 @@ The reason is simplicity: one recorder, one wiring and one receiver configuratio
 
 **The receiver reaches the Pi over USB alone.**
 The USB cable already carries the receiver's power from the Pi, and `ubx_mux` already owns its port, so data takes the same cable.
-UART1 is not wired to anything in the box.
+UART1 is not wired to anything in the box, and its output is turned off.
 
 UART1 would also be the weaker path.
 The lab measured 6 586 to 6 728 bytes a second on UART1 carrying `ESF-RAW` alone ([rtk-inspection, Results](../rtk-inspection/measure.md#results)).
@@ -32,21 +32,26 @@ A second, redundant path over UART1 was weighed and loses on the same ground.
 Power and data share the USB cable, so the failure it guards against is narrow: the receiver powered and running while the Pi's side of USB, or `ubx_mux`, fails.
 Against that it costs a second reader, a second port configuration and a second file to reconcile.
 
-**PPK's raw observations come from `ubx_mux`'s host log.**
-The receiver sends `RXM-RAWX` and `RXM-SFRBX` on USB, and `ubx_mux` writes the raw byte stream to a file on the data partition, as it receives it and outside ROS.
-That record survives a crash of the ROS graph, though not a failure of the Pi or its card.
-The keys are set by name with `VALSET` and confirmed with `VALGET`, in RAM and BBR, once `UBX-MON-VER` has said which keys the firmware has; the M2 plan names them.
+**The bags carry the raw observations.**
+The receiver sends `ESF-RAW`, `RXM-RAWX` and `RXM-SFRBX` on USB, and the UBX driver publishes each as a message that keeps its fields as the receiver sent them, beside the stamping fields every message has.
+The bags are the datasets that fusion algorithms are explored on later, so they hold what the receiver measured, not only what it solved: the IMU's samples and the GNSS observations as well as `NAV-PVT`.
+A filter written later can then be run against a recording made now.
 
-> [!TODO] Confirm the PPK source
-> The position above takes the host log as the one raw record.
-> Whether the UBX driver should also publish `RXM-RAWX` and `RXM-SFRBX` into the bags, for convenience, is open.
-> I would not: the host file is what RTKLIB reads, and a second copy in the bags is a second thing to keep in step.
+These messages obey the stamping rule like any other.
+For `RXM-RAWX` the measurement time is in the message.
+For `ESF-RAW` it is not: its `sTtag` has no documented mapping to GNSS time ([#10](../../reference/open-questions/#blocking-m2)), so the IMU's `header.stamp` cannot be set at the source until #10 is closed.
+Until then the bags keep `sTtag` raw, and IMU messages are not trusted for timing.
 
-> [!TODO] UART1's output
-> The lab left UBX output and `ESF-RAW` enabled on UART1, written to RAM, BBR and flash.
-> With nothing wired to it, that output is harmless to the box, but it is traffic the receiver still generates.
-> I would have the box's startup configuration turn UART1's UBX output off in RAM and BBR, with read-back, so that the receiver sends only what the box records, and leave flash alone: no flash write is needed for this decision.
-> The alternative is to leave UART1 as the lab left it.
+**`ubx_mux` also writes the raw byte stream to a file** on the data partition, as it receives it and outside ROS, as the M1 draft plan already has it do.
+That file is what RTKLIB reads for PPK, without a conversion out of the bags, and it survives a crash of the ROS graph, though not a failure of the Pi or its card.
+It is also the check on the bags: every message the driver published can be found, byte for byte, in the file.
+
+**UART1's output is turned off.**
+The lab left UBX output and `ESF-RAW` enabled on UART1, written to RAM, BBR and flash.
+The box's startup configuration turns UART1's UBX output off in RAM and BBR, so that the receiver sends only what the box records.
+Flash is left as the lab wrote it: this decision needs no flash write, and at every power-up the startup configuration overrides it.
+
+The keys for all of this are set by name with `VALSET` and confirmed with `VALGET`, in RAM and BBR, once `UBX-MON-VER` has said which keys the firmware has; the M2 plan names them.
 
 **The data is written to the Pi's microSD**, on the data partition M5 already plans, with the OS on the same card.
 That card has to take the camera's frames as well as the UBX stream, and the camera's frame rate and bit depth are not decided yet.
@@ -55,8 +60,10 @@ If it fails, a later entry moves the data partition to a separate drive and revi
 
 ## Consequences
 
-- The receiver has one data path, so the M2 configuration has one port to set and read back, and #14 has nothing left to ask: it is settled as DECIDED by this entry.
+- The receiver has one data path, so the M2 configuration has one port to send on and one to switch off, and #14 has nothing left to ask: it is settled as DECIDED by this entry.
 - The one raw record lives where every other stream lives, on a timebase the Pi can stamp, instead of on a card with no clock.
+- A recording is a dataset: the raw IMU and GNSS observations sit in the same bag as the camera's frames, on the same timebase.
+- The bags grow by the raw observations' rate, on a card already carrying the camera's frames, which the microSD row below has to include.
 - There is no record independent of the Pi.
   A dead card, a failed boot or a power cut mid-write loses the raw UBX stream along with everything else.
   M5's read-only root, data partition and bag splitting are what limit that loss, and they become the only protection.
@@ -74,6 +81,8 @@ If it fails, a later entry moves the data partition to a separate drive and revi
   It lost because the backup it gives is weak and costly: it has no clock, it lost frames as the FTDI path did, it needs its own UART configuration on a port already half full with the IMU alone, and its file has to be aligned to the Pi's afterwards.
 - **Feed the Pi from UART1 instead of USB.**
   The receiver would still need USB, or another supply, for power, and UART1 is the narrower and so far lossier port.
+- **The raw observations in the host file only.**
+  It keeps one copy, but leaves the bags without the measurements a fusion algorithm needs, so every later experiment would first have to merge the file back into the bags.
 - **Both USB and UART1 into the Pi.**
   Redundant against a failure on the Pi's side of USB only, at the cost of a second reader and a second configuration.
 - **Record to a USB SSD or an NVMe drive now.**
