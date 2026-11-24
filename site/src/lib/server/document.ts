@@ -76,6 +76,9 @@ export function documentData(key: string) {
         pages: doc.kind == 'entry' ? keys(doc.pages) : [],
         revises: doc.kind == 'entry' ? keys(doc.revises) : [],
         revisedBy: doc.kind == 'entry' ? keys(doc.revisedBy) : [],
+        // What an entry amended in done entries, and the entries that amended this one.
+        amends: doc.kind == 'entry' ? keys(doc.amends) : [],
+        amendedBy: doc.kind == 'entry' || doc.kind == 'entry-document' ? keys(doc.amendedBy) : [],
         documents: doc.kind == 'entry' ? links(cms.archive.documents(key)) : [],
         source: `${SITE.repo}/blob/${SITE.branch}/site/${doc.filename}`,
     };

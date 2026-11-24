@@ -96,13 +96,14 @@ type Place =
 //                                            records them
 //
 // Pages say what is, and are rewritten as the library changes; an entry keeps
-// what was proposed and why, and is not rewritten once it is done. The two
+// what was proposed and why, and is not rewritten once it is done, but for its references. The two
 // point at each other: an entry lists the `pages` it changed, and a page shows
 // the entries that list it.
 //
 // Frontmatter: every document takes `title`, `summary`, `depends_on` and
 // `katex_macros`. A page also needs an `order` within its track; an entry may
-// list the `pages` it changed and the earlier entries it `revises`. A bare slug
+// list the `pages` it changed, the earlier entries it `revises`, and the documents of done
+// entries it `amends` to keep a reference in them true (`archive/<slug>/<name>`). A bare slug
 // in `depends_on` names a math note, in `revises` an entry; anything else is
 // written as a key, such as `concepts/graph` or `archive/normal/math`.
 //
@@ -202,6 +203,7 @@ export function sitePreset(options: SitePresetOptions): Preset {
             dependsOn: fm.optionalStrings('depends_on') ?? [],
             pages: fm.optionalStrings('pages') ?? [],
             revises: fm.optionalStrings('revises') ?? [],
+            amends: fm.optionalStrings('amends') ?? [],
         });
         numberContents(store, file, entry.key);
         reportProblems(store, fm);
@@ -290,6 +292,8 @@ export function sitePreset(options: SitePresetOptions): Preset {
                 pages: [],
                 revises: [],
                 revisedBy: [],
+                amends: [],
+                amendedBy: [],
             };
             register(store, file, record, fm);
         },
@@ -314,6 +318,7 @@ export function sitePreset(options: SitePresetOptions): Preset {
                 kind: 'entry-document',
                 entry: `archive/${place.slug}`,
                 name: place.name,
+                amendedBy: [],
                 // Named by its stage ("Mathematics", "Plan"), not by its first heading, which
                 // names a section of it ("The problem"); only its own `title` overrides that.
                 title: fm.has('title')
@@ -391,10 +396,13 @@ export function sitePreset(options: SitePresetOptions): Preset {
                         )
                         .filter((key): key is string => !!key && key != record.key),
                 );
-            } else if (raw.pages.length || raw.revises.length) {
+                record.amends = unique(
+                    raw.amends.filter((ref) => amendedEntry(store, record, ref) !== undefined),
+                );
+            } else if (raw.pages.length || raw.revises.length || raw.amends.length) {
                 store.error(
                     record.filename,
-                    `${record.filename}: only an entry's \`index\` lists \`pages\` or \`revises\`.`,
+                    `${record.filename}: only an entry's \`index\` lists \`pages\`, \`revises\` or \`amends\`.`,
                 );
             }
         }
@@ -408,8 +416,31 @@ export function sitePreset(options: SitePresetOptions): Preset {
             for (const key of record.pages) (all.get(key) as SitePage).entries.push(record.key);
             for (const key of record.revises)
                 (all.get(key) as SiteEntry).revisedBy.push(record.key);
+            for (const key of record.amends) {
+                const amended = all.get(amendedEntry(store, record, key)!) as SiteEntry;
+                if (!amended.amendedBy.includes(record.key)) amended.amendedBy.push(record.key);
+                (all.get(key) as SiteEntryDocument).amendedBy.push(record.key);
+            }
         }
         store.collection<Graph>('graph').set('graph', graphOf(store, [...all.values()]));
+    }
+
+    // The entry an `amends` item names, by key: `archive/<slug>/<name>` is one of its documents.
+    function amendedEntry(store: Store, from: SiteDocument, ref: string): string | undefined {
+        const all = documents(store);
+        const entry = ref.split('/').slice(0, 2).join('/');
+        if (
+            all.get(ref)?.kind == 'entry-document' &&
+            all.get(entry)?.kind == 'entry' &&
+            entry != from.key
+        ) {
+            return entry;
+        }
+        store.error(
+            from.filename,
+            `${from.filename}: \`amends\` entry '${ref}' names no document of another entry.`,
+        );
+        return undefined;
     }
 
     function graphOf(store: Store, records: SiteDocument[]): Graph {
@@ -508,6 +539,7 @@ interface Written {
     dependsOn: string[];
     pages: string[];
     revises: string[];
+    amends: string[];
 }
 
 // The frontmatter's `summary`, or else the first paragraph, flattened once its
