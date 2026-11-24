@@ -8,8 +8,9 @@ export const box = defineGraph({
     title: 'The box',
     caption:
         'TIMEPULSE disciplines the Pi’s clock through chrony and locks the Pico’s camera triggers. ' +
-        'ubx_mux owns the receiver’s USB port, so time sync runs without ROS, and forwards the UBX ' +
-        'stream to the ROS driver. How trigger times reach trigger_bridge is not decided yet. ' +
+        'ubx_mux owns the receiver’s USB port, its only data path, so time sync runs without ROS; it ' +
+        'writes the raw UBX stream to a file and forwards it to the ROS driver. ' +
+        'How trigger times reach trigger_bridge is not decided yet. ' +
         'Power comes from one USB-C input to the Pi; the AD3 probes the timing lines on the bench.',
     width: 900,
     height: 560,
@@ -27,7 +28,6 @@ export const box = defineGraph({
     },
     nodes: [
         { id: 'f9r', x: 110, y: 420, kind: 'hardware', label: 'ZED-F9R' },
-        { id: 'logger', x: 110, y: 130, kind: 'hardware', label: 'SD logger' },
         { id: 'pico', x: 330, y: 90, kind: 'hardware', label: 'Pico' },
         { id: 'camera', x: 560, y: 90, kind: 'hardware', label: 'IMX296' },
         { id: 'mux', x: 330, y: 470, kind: 'host', label: 'ubx_mux' },
@@ -41,7 +41,6 @@ export const box = defineGraph({
         { from: 'f9r', to: 'mux', kind: 'data', label: 'UBX, USB' },
         { from: 'f9r', to: 'chrony', kind: 'timing', label: 'PPS' },
         { from: 'f9r', to: 'pico', kind: 'timing', label: 'PPS', labelAt: 0.35 },
-        { from: 'f9r', to: 'logger', kind: 'data', label: 'raw UBX, UART' },
         { from: 'mux', to: 'chrony', kind: 'data', label: 'coarse time' },
         { from: 'mux', to: 'driver', kind: 'data' },
         { from: 'pico', to: 'camera', kind: 'timing', label: 'trigger' },

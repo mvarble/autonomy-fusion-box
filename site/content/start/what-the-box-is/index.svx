@@ -20,7 +20,6 @@ Anything it says about the hardware is a claim until the [open questions](../../
 | Item                                                                       | Role                                                         |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | ArduSimple simpleRTK2B Fusion (u-blox ZED-F9R)                             | RTK GNSS and internal IMU; the master clock                  |
-| Existing SD logger board                                                   | Independent raw-UBX backup, for PPK ground truth with RTKLIB |
 | Raspberry Pi 5 4 GB with Active Cooler                                     | Main computer                                                |
 | Innomaker CAM-MIPI296RAW (Sony IMX296 mono global shutter, 1456×1088, M12) | Camera                                                       |
 | Raspberry Pi Pico                                                          | Trigger generator, locked to the PPS                         |
@@ -44,6 +43,18 @@ Each message also keeps the raw GPS week and time of week, from which continuous
 > [!DECISION] Why UNIX nanoseconds
 > Stamps then compare directly with the system clock and agree with every ROS tool, and the rare leap second is recoverable from the raw fields.
 > See the [foundations writeup](../../archive/foundations/writeup.md).
+
+**Data.** The receiver reaches the Pi over USB alone, which carries its power as well, and its UART1 output is turned off.
+The Pi records everything, on a data partition of its microSD.
+The bags hold the receiver's raw observations, `ESF-RAW`, `RXM-RAWX` and `RXM-SFRBX`, with their fields as sent, beside `NAV-PVT` and the camera's frames, so that fusion algorithms can be explored on recordings made now.
+`ubx_mux` also writes the raw UBX byte stream to a file, which RTKLIB reads for PPK ground truth and which checks the bags.
+Nothing is recorded independently of the Pi.
+Whether the microSD keeps up is [#34](../../reference/open-questions/#blocking-m5) in the ledger, measured in M5.
+
+> [!DECISION] Why there is no separate logger
+> One recorder, one wiring and one receiver configuration are simpler to reason about than two, and the Pi already owns the receiver's USB port.
+> A logger on UART1 would have given a backup with no clock, on a port already half full with the IMU alone.
+> See the [no-logger writeup](../../archive/no-logger/writeup.md).
 
 **Software.** The Pi runs 64-bit Raspberry Pi OS Trixie.
 ROS 2 Jazzy comes from RoboStack, installed with Pixi and pinned by a committed `pixi.lock`; chrony and `ubx_mux` run on the host, outside it.

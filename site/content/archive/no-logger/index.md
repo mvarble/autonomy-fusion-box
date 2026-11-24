@@ -1,9 +1,13 @@
 ---
 title: "Record everything on the Pi, without an SD logger"
-pages: []
+pages:
+    - start/what-the-box-is
+    - reference/milestones
+    - reference/open-questions
 ---
 
-The box drops the separate SD-card logger (the SparkFun OpenLog the rtk-inspection lab recorded UART1 with), and records every stream, raw UBX included, to the Raspberry Pi's own storage.
-The plan had the logger as an independent raw-UBX backup for PPK ground truth, wired to one of the receiver's UARTs beside the Pi, which raised the question in the ledger of whether the two conflict on the F9R's ports.
-Without it there is one recorder and one wiring to reason about, and the decision has to say what replaces the backup and where PPK's raw observations come from.
-The ledger rows, the pages and the archive's references that assumed the logger follow, the archive's through an amendment that keeps its references true without changing what it argued or measured.
+The box dropped its separate SD-card logger, the role the SparkFun OpenLog played in the rtk-inspection lab, and records everything on the Pi.
+The receiver reaches the Pi over USB alone, which also carries its power, and UART1's output is turned off, so there is one data path, one recorder and one configuration to keep true.
+The bags hold the raw IMU and GNSS observations, `ESF-RAW`, `RXM-RAWX` and `RXM-SFRBX`, as datasets for exploring fusion later, and `ubx_mux` writes the raw byte stream to a file that RTKLIB reads for PPK.
+The cost is that nothing is recorded independently of the Pi.
+The ledger settled #14 as decided, pointed #32 at the USB log, and gained two rows: whether the firmware sends the raw observations on USB (#33), and whether the microSD sustains the recorder's write rate (#34), measured in M5.
