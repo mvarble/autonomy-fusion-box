@@ -66,7 +66,8 @@ And the commands that move an entry, all of them the user's to give:
 5. **Approval is a gate, not a formality.** `wf approve` refuses a document that is uncommitted,
    empty, or still has a `> [!TODO]`; a plan without a checklist; a build with unticked boxes or
    uncommitted work; measurements without a `## Results` section; a publish whose changed pages are
-   not listed in the entry's `pages`.
+   not listed in the entry's `pages`, or whose changes to done entries are not listed in its
+   `amends`.
 
 Anything outside these areas (the workflow's tool, the skills, the site's own code) is not gated.
 
@@ -85,12 +86,32 @@ and git keeps every draft.
 ## A finished entry
 
 When `publish` is approved the entry is done, `.workflow/active` is removed, and the branch is
-ready to merge. A done entry is never edited again. When the box later changes what an entry
-built, a new entry says so with `--revises <slug>`; the site then marks the old entry as revised,
-and the pages show both under "How this came to be".
+ready to merge. A done entry's argument is never edited again. When the box later changes what an
+entry built, a new entry says so with `--revises <slug>`; the site then marks the old entry as
+revised, and the pages show both under "How this came to be".
 
 An entry set aside with `/wf-abandon` keeps its documents, approved or not, and can be taken up
 again with `/wf-resume`.
+
+## Amending a done entry
+
+The archive's documents refer to what changes after them: ledger rows by number and section, pages
+and their headings, math notes. A reference is kept true: it follows what moves, and where what it
+cited is gone, the document says in a few words what it was. That is the one change a done entry
+admits. What it claimed, measured and weighed stays as it was approved.
+
+- Only at its `publish` stage may an entry change another's files, and only a done entry's stage
+  documents (`plan`, `measure`, `writeup`). `bin/wf guard` refuses anything else.
+- The entry lists what it changed under `amends` in its `index.md`, each as
+  `archive/<slug>/<stage>`.
+- `wf approve` refuses the publish if a done entry's document changed and is not listed, or is
+  listed and did not change. On approval it writes the amended document's new hash into the
+  amended entry's `workflow.json`, with an `amend` event naming the amending entry. The commit of
+  the document's own approval stays in the record, and is where its text before the amendment is.
+  Commit every `workflow.json` it names.
+- Nothing mechanical limits an amendment to references: the person who approves the publish reads
+  the diff. Never use an amendment to change what a document argues or measured; that is what a
+  new entry with `--revises` is for.
 
 ## Revisions within a stage
 
