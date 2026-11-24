@@ -63,6 +63,9 @@ export interface WorkflowEvent {
     stage?: string;
     reason?: string;
     commit?: string;
+    // An amendment: the document changed, and the entry that changed it.
+    document?: string;
+    by?: string;
     [key: string]: unknown;
 }
 
@@ -79,6 +82,10 @@ export interface SiteEntry extends Common {
     // change this one's, by key.
     revises: string[];
     revisedBy: string[];
+    // The documents of done entries it changed to keep a reference in them true, by key, and the
+    // later entries that amended this one.
+    amends: string[];
+    amendedBy: string[];
 }
 
 export interface SiteEntryDocument extends Common {
@@ -86,6 +93,8 @@ export interface SiteEntryDocument extends Common {
     // The entry it belongs to, by key, and its name there (`math`, `plan`).
     entry: string;
     name: string;
+    // The later entries that amended it, by key.
+    amendedBy: string[];
 }
 
 export type SiteDocument = SitePage | SiteMath | SiteEntry | SiteEntryDocument;

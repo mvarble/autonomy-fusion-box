@@ -55,9 +55,11 @@ katex_macros: # this document only; wins over katex.config.ts
 ---
 ```
 
-An entry's `index.md` also lists the `pages` it changed (`[system/time-base]`) and the earlier
-entries it `revises`. Each page then shows the entries that changed it, newest first, under "How
-this came to be", and an entry that a later one revises says so at its top.
+An entry's `index.md` also lists the `pages` it changed (`[system/time-base]`), the earlier
+entries it `revises`, and the documents of finished entries it `amends`
+(`[archive/rtk-inspection/measure]`). Each page then shows the entries that changed it, newest
+first, under "How this came to be"; an entry that a later one revises says so at its top, and a
+document that a later one amended says which entry brought its references up to date.
 
 - **Math:** `$inline$` and `$$display$$`. A KaTeX error does not fail the build. The formula
   renders in red, and the build prints a `katex:` warning naming the file.

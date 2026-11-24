@@ -8,17 +8,17 @@ Each milestone is opened with `/wf-start <slug> milestone` and ends in measureme
 None has been started.
 All the hardware is in hand.
 
-|     | Milestone                      | What it must show                                                                                                                                     |
-| --- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M0  | Repository scaffolding         | The directories and the Pixi manifest decided in [`foundations`](../../archive/foundations/writeup.md), and the `box` environment installed on the Pi |
-| M1  | Time base                      | chrony locked to PPS; PPS-to-system-clock bias and jitter, measured with the AD3                                                                      |
-| M2  | UBX logging and Allan variance | `ESF-RAW` and `NAV-PVT` published; noise density and bias random walk from a multi-hour static log, with temperature                                  |
-| M3  | Pico trigger firmware          | PPS-locked triggers with a sequence counter; histogram of edge offsets over hours                                                                     |
-| M4  | Camera bring-up                | Trigger mode working; trigger-to-exposure latency; PPS-driven LED test; dropped-frame detection                                                       |
-| M5  | Recorder service               | Bag splitting, button and LED, systemd, read-only root, data partition                                                                                |
-| M6  | Calibration                    | Camera intrinsics, and camera–IMU extrinsics and time offset in Kalibr                                                                                |
-| M7  | Power and case                 | Power measurements, sensor plate CAD, flex test, the shell                                                                                            |
-| M8  | Fusion                         | GTSAM GNSS/IMU with a simulated outage test, then OpenVINS, against PPK ground truth                                                                  |
+|     | Milestone                      | What it must show                                                                                                                                                          |
+| --- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0  | Repository scaffolding         | The directories and the Pixi manifest decided in [`foundations`](../../archive/foundations/writeup.md), and the `box` environment installed on the Pi                      |
+| M1  | Time base                      | chrony locked to PPS; PPS-to-system-clock bias and jitter, measured with the AD3                                                                                           |
+| M2  | UBX logging and Allan variance | `ESF-RAW`, `RXM-RAWX`, `RXM-SFRBX` and `NAV-PVT` published over USB, UART1's output off; noise density and bias random walk from a multi-hour static log, with temperature |
+| M3  | Pico trigger firmware          | PPS-locked triggers with a sequence counter; histogram of edge offsets over hours                                                                                          |
+| M4  | Camera bring-up                | Trigger mode working; trigger-to-exposure latency; PPS-driven LED test; dropped-frame detection                                                                            |
+| M5  | Recorder service               | Bag splitting, button and LED, systemd, read-only root, data partition on the microSD, its sustained write rate (#34)                                                      |
+| M6  | Calibration                    | Camera intrinsics, and camera–IMU extrinsics and time offset in Kalibr                                                                                                     |
+| M7  | Power and case                 | Power measurements, sensor plate CAD, flex test, the shell                                                                                                                 |
+| M8  | Fusion                         | GTSAM GNSS/IMU with a simulated outage test, then OpenVINS, against PPK ground truth                                                                                       |
 
 ## M1: draft plan
 
@@ -32,7 +32,7 @@ Camera stamps come from the Pico and IMU stamps from the receiver, so the Pi clo
 
 - Image the Pi with 64-bit Raspberry Pi OS Trixie, and run the image checks in the [ledger](../open-questions/#os-decision-evidence), including the page size (#29).
 - Poll `MON-VER`, and save a `VALGET` snapshot of every layer.
-  The SD logger depends on this receiver, so we need a way back.
+  The [rtk-inspection](../../archive/rtk-inspection/measure.md) lab wrote settings to every layer, flash included, so the snapshot is the way back to the state the receiver is in now.
 - Find TIMEPULSE on the board and check its swing with the AD3 **before** connecting the Pi, outdoors with a fix.
   There is no pulse before time lock.
 
@@ -49,16 +49,16 @@ Camera stamps come from the Pico and IMU stamps from the receiver, so the Pi clo
 
 Set by name via pyubx2, in RAM and BBR, with read-back.
 
-| Key                                                                                | Value                   | Note                                               |
-| ---------------------------------------------------------------------------------- | ----------------------- | -------------------------------------------------- |
-| `CFG-TP-TIMEGRID_TP1`                                                              | 1 (GPS)                 | The only timepulse value that differs from default |
-| `CFG-TP-TP1_ENA`, `SYNC_GNSS_TP1`, `USE_LOCKED_TP1`, `ALIGN_TO_TOW_TP1`, `POL_TP1` | 1                       | Rising edge at the top of the second               |
-| `CFG-TP-PULSE_DEF` / `PULSE_LENGTH_DEF`                                            | 0 (PERIOD) / 1 (LENGTH) |                                                    |
-| `CFG-TP-PERIOD_TP1` / `PERIOD_LOCK_TP1`                                            | 1000000 µs              |                                                    |
-| `CFG-TP-LEN_TP1` / `LEN_LOCK_TP1`                                                  | 0 / 100000 µs           | No pulse until locked                              |
-| `CFG-RATE-MEAS` / `RATE-NAV` / `RATE-TIMEREF`                                      | 1000 ms / 1 / GPS       | Keep 1 Hz for M1                                   |
-| `CFG-MSGOUT-UBX_TIM_TP_USB`, `NAV_PVT_USB`, `NAV_TIMEGPS_USB`, `NAV_TIMELS_USB`    | 1                       | The leap-second count and its source (#31)         |
-| `CFG-USBOUTPROT-NMEA`                                                              | 0                       | USB only; the logger's UART is untouched           |
+| Key                                                                                | Value                   | Note                                                           |
+| ---------------------------------------------------------------------------------- | ----------------------- | -------------------------------------------------------------- |
+| `CFG-TP-TIMEGRID_TP1`                                                              | 1 (GPS)                 | The only timepulse value that differs from default             |
+| `CFG-TP-TP1_ENA`, `SYNC_GNSS_TP1`, `USE_LOCKED_TP1`, `ALIGN_TO_TOW_TP1`, `POL_TP1` | 1                       | Rising edge at the top of the second                           |
+| `CFG-TP-PULSE_DEF` / `PULSE_LENGTH_DEF`                                            | 0 (PERIOD) / 1 (LENGTH) |                                                                |
+| `CFG-TP-PERIOD_TP1` / `PERIOD_LOCK_TP1`                                            | 1000000 µs              |                                                                |
+| `CFG-TP-LEN_TP1` / `LEN_LOCK_TP1`                                                  | 0 / 100000 µs           | No pulse until locked                                          |
+| `CFG-RATE-MEAS` / `RATE-NAV` / `RATE-TIMEREF`                                      | 1000 ms / 1 / GPS       | Keep 1 Hz for M1                                               |
+| `CFG-MSGOUT-UBX_TIM_TP_USB`, `NAV_PVT_USB`, `NAV_TIMEGPS_USB`, `NAV_TIMELS_USB`    | 1                       | The leap-second count and its source (#31)                     |
+| `CFG-USBOUTPROT-NMEA`                                                              | 0                       | USB only; UART1 is left as it is until M2 turns its output off |
 
 Once M2 raises the rate, `trigger_bridge` must use the last `TIM-TP` before each edge.
 
@@ -73,7 +73,7 @@ Once M2 raises the rate, `trigger_bridge` must use the last `TIM-TP` before each
 ### Coarse time and chrony
 
 A small host process, `host/ubx_mux`, owns the F9R port.
-It logs raw UBX, forwards bytes to the ROS node, and feeds chrony only when `NAV-PVT` shows `validTime` and `fullyResolved`, so time sync runs without ROS.
+It writes the raw UBX stream to a file, which RTKLIB reads for PPK, forwards bytes to the ROS node, and feeds chrony only when `NAV-PVT` shows `validTime` and `fullyResolved`, so time sync runs without ROS.
 The SOCK message format comes from `refclock_sock.c` for the installed chrony version.
 
 ```text

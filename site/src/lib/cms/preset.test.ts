@@ -107,6 +107,19 @@ test('pages show the entries that changed them, newest first', () => {
     );
 });
 
+test('an entry lists what it amends, and what it amended says so', () => {
+    const has = (text: string) => messages.some((m) => m.includes(text));
+    assert.deepEqual(doc('archive/normal-v2', 'entry').amends, [
+        'archive/normal/math',
+        'archive/normal/implementation',
+    ]);
+    assert.deepEqual(doc('archive/normal', 'entry').amendedBy, ['archive/normal-v2']);
+    assert.deepEqual(doc('archive/normal/math', 'entry-document').amendedBy, ['archive/normal-v2']);
+    assert.deepEqual(doc('archive/normal/plan', 'entry-document').amendedBy, []);
+    assert.ok(has("`amends` entry 'archive/normal' names no document of another entry"));
+    assert.ok(has("`amends` entry 'archive/normal/notes' names no document of another entry"));
+});
+
 test('what does not resolve is reported', () => {
     const has = (text: string) => messages.some((m) => m.includes(text));
     assert.ok(has("`pages` entry 'guide/nowhere' names no page"));

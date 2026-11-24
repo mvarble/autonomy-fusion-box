@@ -376,3 +376,110 @@ test('a probe goes straight to its measurements, writes no code, and closes a le
     const done = r.wf('approve', '--base', 'main');
     assert.equal(done.code, 0, done.stderr);
 });
+
+// Takes 'm1' through to done and merges it into main, then opens a decision on a new branch and
+// brings it to its publish stage.
+const design = 'site/content/archive/design';
+function amender(r: ReturnType<typeof repo>) {
+    toPublish(r);
+    write(r.root, 'site/content/system/time-base/index.md', '---\ntitle: Time\norder: 1\n---\n\nNew.\n');
+    write(r.root, `${entry}/index.md`, '---\ntitle: Time base\npages: [system/time-base]\n---\n\nThe clock.\n');
+    r.commit();
+    const done = r.wf('approve', '--base', 'main');
+    assert.equal(done.code, 0, done.stderr);
+    r.commit();
+    r.sh('checkout', '-q', 'main');
+    r.sh('merge', '-q', 'work');
+    r.sh('checkout', '-qb', 'order');
+    r.wf('start', 'design', '--kind', 'decision', '--title', 'A design');
+    write(r.root, `${design}/index.md`, '---\ntitle: A design\npages: []\n---\n\nA position.\n');
+    write(r.root, `${design}/writeup.md`, 'Argued.\n');
+    r.commit();
+    return r;
+}
+
+const guardOf = (r: ReturnType<typeof repo>) => (file: string) =>
+    run(['guard'], { cwd: r.root, stdin: JSON.stringify({ cwd: r.root, tool_input: { file_path: file } }) });
+
+test('an entry amends a done entry only at its publish stage', () => {
+    const r = amender(repo());
+    const guard = guardOf(r);
+    const early = guard(`${entry}/measure.md`);
+    assert.equal(early.code, 2);
+    assert.match(early.stderr, /may amend it only at its publish stage/);
+    assert.equal(r.wf('approve').code, 0);
+    r.commit();
+    assert.equal(guard(`${entry}/measure.md`).code, 0);
+    assert.equal(guard(`${entry}/plan.md`).code, 0);
+    assert.equal(guard(`${entry}/index.md`).code, 2, 'only its documents');
+    assert.equal(guard(`${entry}/photo.png`).code, 2);
+    assert.equal(guard(`${entry}/workflow.json`).code, 2);
+});
+
+test('an amendment is listed under amends, and recorded when the publish is approved', () => {
+    const r = amender(repo());
+    r.wf('approve');
+    const approved = workflow(r.root).approvals.measure;
+    write(r.root, `${entry}/measure.md`, results + '\nSee [#3](../../reference/open-questions/#closed).\n');
+    write(r.root, 'site/content/system/time-base/index.md', '---\ntitle: Time\norder: 1\n---\n\nNewer.\n');
+    write(r.root, `${design}/index.md`, '---\ntitle: A design\npages: [system/time-base]\n---\n\nA position.\n');
+    r.commit();
+
+    const unlisted = r.wf('check', '--base', 'main');
+    assert.equal(unlisted.code, 1);
+    assert.match(unlisted.stderr, /measure\.md changed after it was approved/);
+    assert.match(unlisted.stderr, /list it as 'archive\/m1\/measure' under `amends`/);
+    assert.match(r.wf('approve', '--base', 'main').stderr, /list it as 'archive\/m1\/measure' under `amends`/);
+
+    const listing = (amends: string) =>
+        write(r.root, `${design}/index.md`, `---\ntitle: A design\npages: [system/time-base]\namends: [${amends}]\n---\n\nA position.\n`);
+    listing('archive/m1/measure, archive/m1/plan, archive/m1/index, archive/design/writeup');
+    r.commit();
+    const wrong = r.wf('approve', '--base', 'main').stderr;
+    assert.match(wrong, /amends 'archive\/m1\/plan', which this branch did not change/);
+    assert.match(wrong, /'archive\/m1\/index' under `amends`, which names no document/);
+    assert.match(wrong, /'archive\/design\/writeup' under `amends`, which names no document/);
+
+    listing('archive/m1/measure');
+    r.commit();
+    const check = r.wf('check', '--base', 'main');
+    assert.equal(check.code, 0, check.stderr);
+    const done = r.wf('approve', '--base', 'main');
+    assert.equal(done.code, 0, done.stderr);
+    assert.match(done.stdout, /Recorded its amendments of 'm1'/);
+
+    const record = workflow(r.root);
+    assert.notEqual(record.approvals.measure.hash, approved.hash);
+    assert.equal(record.approvals.measure.commit, approved.commit, 'where the text before the amendment is');
+    const events = record.events.filter((event: { action: string }) => event.action == 'amend');
+    assert.deepEqual(
+        events.map((event: Record<string, string>) => [event.document, event.stage, event.by]),
+        [['archive/m1/measure', 'measure', 'design']],
+    );
+    r.commit();
+    const merge = r.wf('check', '--base', 'main', '--merge');
+    assert.equal(merge.code, 0, merge.stderr);
+
+    write(r.root, `${entry}/measure.md`, results + '\nChanged again.\n');
+    assert.match(r.wf('check', '--base', 'main').stderr, /measure\.md changed after it was approved/);
+});
+
+test('an entry that is not done is not amended', () => {
+    const r = repo();
+    toBuild(r);
+    r.commit();
+    r.sh('checkout', '-q', 'main');
+    r.sh('merge', '-q', 'work');
+    r.sh('checkout', '-qb', 'order');
+    fs.rmSync(path.join(r.root, '.workflow/active'));
+    r.wf('start', 'design', '--kind', 'decision');
+    write(r.root, `${design}/index.md`, '---\ntitle: A design\npages: []\namends: [archive/m1/plan]\n---\n\nA position.\n');
+    write(r.root, `${design}/writeup.md`, 'Argued.\n');
+    r.commit();
+    r.wf('approve');
+    assert.equal(guardOf(r)(`${entry}/plan.md`).code, 2);
+    write(r.root, `${entry}/plan.md`, '- [ ] Add it again.\n');
+    r.commit();
+    assert.match(r.wf('approve', '--base', 'main').stderr, /'m1' is not a done entry/);
+    assert.match(r.wf('check', '--base', 'main').stderr, /belongs to entry 'm1', but this branch works on 'design'/);
+});

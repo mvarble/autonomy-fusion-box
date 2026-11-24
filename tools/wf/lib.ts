@@ -79,10 +79,14 @@ export interface Approval {
 
 export interface WorkflowEvent {
     date: string;
-    action: 'start' | 'approve' | 'reopen' | 'abandon' | 'resume';
+    action: 'start' | 'approve' | 'reopen' | 'abandon' | 'resume' | 'amend';
     stage: Stage;
     reason?: string;
     commit?: string;
+    // An amendment: the document changed, as the amending entry lists it under `amends`, and the
+    // entry that changed it.
+    document?: string;
+    by?: string;
 }
 
 export interface Workflow {
@@ -224,6 +228,41 @@ export function placeOf(rel: string): Place {
     return { area: 'free' };
 }
 
+// What an entry may amend in another: a done entry's stage documents, to keep a reference in them
+// true. The key is how the amending entry lists the file under `amends` in its `index.md`: its
+// path under the content directory, without its extension.
+export function amendKey(rel: string): string | undefined {
+    rel = rel.split(path.sep).join('/');
+    if (!rel.startsWith(ARCHIVE + '/')) return undefined;
+    const [slug, file, ...rest] = rel.slice(ARCHIVE.length + 1).split('/');
+    if (!slug || !file || rest.length) return undefined;
+    const name = /^([a-z]+)\.(md|svx)$/.exec(file)?.[1] as Stage | undefined;
+    return name && hasDocument(name) ? `archive/${slug}/${name}` : undefined;
+}
+
+// The entry and the stage an `amends` key names.
+export function amendTarget(key: string): { slug: string; stage: Stage } | undefined {
+    const document = /^archive\/([a-z0-9-]+)\/([a-z]+)$/.exec(key);
+    return document && hasDocument(document[2] as Stage)
+        ? { slug: document[1]!, stage: document[2] as Stage }
+        : undefined;
+}
+
+// The file an `amends` key names.
+export function amendPath(root: string, key: string): string | undefined {
+    const target = amendTarget(key);
+    return target && documentPath(root, target.slug, target.stage);
+}
+
+// What the entry being worked on may change in the others.
+export interface Amending {
+    // Whether an entry is done: only a done entry is amended.
+    isDone(slug: string): boolean;
+    // What the entry lists under `amends`. An edit about to be made is not held to the list,
+    // which is written as the publish goes; a branch's history is.
+    amends: string[];
+}
+
 // Why `rel` may not be changed while `slug` (if any) is the entry being worked
 // on, or undefined when it may. `editing` is set for a single edit about to be
 // made, as opposed to a change already in a branch's history: an edit may only
@@ -232,6 +271,7 @@ export function refusal(
     rel: string,
     subject: { slug: string; workflow: Workflow } | undefined,
     editing: boolean,
+    amending?: Amending,
 ): string | undefined {
     const place = placeOf(rel);
     switch (place.area) {
@@ -246,6 +286,21 @@ export function refusal(
                     : undefined;
             }
             if (place.slug != subject.slug) {
+                const key = amendKey(rel);
+                const publishing = reached(subject.workflow).includes('publish');
+                if (key && amending?.isDone(place.slug) && publishing) {
+                    if (editing || amending.amends.includes(key)) return undefined;
+                    return (
+                        `${rel} belongs to entry '${place.slug}', which is done; list it as ` +
+                        `'${key}' under \`amends\` in ${entryDir(subject.slug)}/index.md.`
+                    );
+                }
+                if (key && amending?.isDone(place.slug)) {
+                    return (
+                        `${rel} belongs to entry '${place.slug}', which is done; '${subject.slug}' ` +
+                        'may amend it only at its publish stage, to keep a reference in it true.'
+                    );
+                }
                 return `${rel} belongs to entry '${place.slug}', but this branch works on '${subject.slug}'.`;
             }
             if (!editing || !place.stage) return undefined;

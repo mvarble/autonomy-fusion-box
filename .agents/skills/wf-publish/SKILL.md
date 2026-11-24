@@ -34,6 +34,10 @@ before changing them.
 - **The entry's `index.md`.** Replace its opening paragraph with what the entry did, for a reader of
   the archive, and list every page it changed under `pages`. `wf approve` refuses a changed page
   that is not listed, and a listed one the branch did not change.
+- **What it amends.** Where the entry moved or removed something a done entry's document refers to
+  (a ledger row, a page, a heading), change that reference in the done entry's document, and list
+  the document under `amends` in the entry's `index.md` (`workflow.md`, under "Amending a done
+  entry"). Change nothing else there.
 
 Build the site (`cd site && pnpm build`) and fix every warning and broken link. Commit as you go.
 
