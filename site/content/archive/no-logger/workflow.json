@@ -1,6 +1,6 @@
 {
     "kind": "decision",
-    "stage": "publish",
+    "stage": "done",
     "started": "2026-11-24",
     "events": [
         {
@@ -13,6 +13,12 @@
             "action": "approve",
             "stage": "writeup",
             "commit": "12d2117"
+        },
+        {
+            "date": "2026-11-24",
+            "action": "approve",
+            "stage": "publish",
+            "commit": "cee2b6f"
         }
     ],
     "approvals": {
@@ -20,6 +26,11 @@
             "date": "2026-11-24",
             "commit": "12d2117",
             "hash": "3a0af4afb6428e91bbf9bd3c654e79c5c1fdadc26543f15f2ca80b4fc7738b18"
+        },
+        "publish": {
+            "date": "2026-11-24",
+            "commit": "cee2b6f"
         }
-    }
+    },
+    "finished": "2026-11-24"
 }
