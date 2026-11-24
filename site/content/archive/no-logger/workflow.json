@@ -1,13 +1,25 @@
 {
     "kind": "decision",
-    "stage": "writeup",
+    "stage": "publish",
     "started": "2026-11-24",
     "events": [
         {
             "date": "2026-11-24",
             "action": "start",
             "stage": "writeup"
+        },
+        {
+            "date": "2026-11-24",
+            "action": "approve",
+            "stage": "writeup",
+            "commit": "12d2117"
         }
     ],
-    "approvals": {}
+    "approvals": {
+        "writeup": {
+            "date": "2026-11-24",
+            "commit": "12d2117",
+            "hash": "3a0af4afb6428e91bbf9bd3c654e79c5c1fdadc26543f15f2ca80b4fc7738b18"
+        }
+    }
 }
