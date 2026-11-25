@@ -1,7 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths';
     import Logo from '$lib/components/Logo.svelte';
-    import OpenEntry from '$lib/components/OpenEntry.svelte';
+    import OpenEntry from '@mvarble/mesearch-workflow/app/lib/components/OpenEntry.svelte';
     import TrackCard from '$lib/components/TrackCard.svelte';
     import { ARCHIVE, MATH, SITE, TRACKS } from '$lib/site';
 
@@ -27,7 +27,7 @@
     </div>
 </section>
 
-<section class="landing-open">
+<section class="landing-section landing-open">
     <h2>On the table</h2>
     {#each data.open as entry (entry.link.key)}
         <OpenEntry {entry} />

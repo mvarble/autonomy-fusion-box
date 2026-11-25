@@ -1,5 +1,7 @@
-// The one place that defines the site's structure. `vite.config.ts` hands the tracks and the
-// entry documents to the content database, and the navigation is built from the same lists.
+// The one place that defines the site's structure. `docsSite()` hands the tracks and the entry
+// documents to the content database, and the pages `@mvarble/mesearch-workflow` shares read this
+// module as `$site`, with defaults for what it leaves out: the stages of each kind, for instance,
+// come from `workflow.config.ts`.
 
 export const SITE = {
     name: 'fusion box',
@@ -61,6 +63,21 @@ export const ARCHIVE = {
     blurb:
         'How each part of the box came to be: the decisions argued for it, the plans it was built ' +
         'by, and the numbers it measured, kept as they were approved.',
+    // The paragraph the archive's page opens with.
+    about:
+        'An entry is opened for each piece of work and moves through its stages: for a milestone, ' +
+        'the plan, the build, the measurements, and last the pages that say what the milestone ' +
+        'made true. Between milestones, a probe records one session at the bench: what was done, ' +
+        'what was seen, what it taught, and the open questions it closed. What each stage ' +
+        'approved is kept here as it was approved. When the box later changes, a new entry ' +
+        'revises the old one rather than rewriting it.',
+};
+
+// What `llms.txt` says of the pages, after "Every document below links to its Markdown source."
+export const LLMS = {
+    about:
+        'The pages say what the box is now; the Archive keeps how each part came to be, and may ' +
+        'describe what has since changed.',
 };
 
 // The documents an archive entry may hold, in the order they are written.
@@ -69,31 +86,6 @@ export const DOCUMENTS = [
     { name: 'plan', title: 'Plan' },
     { name: 'measure', title: 'Measurements' },
 ] as const;
-
-// The stages of each kind of entry, as `tools/wf/lib.ts` defines them.
-export const STAGES: Record<string, string[]> = {
-    milestone: ['plan', 'build', 'measure', 'publish'],
-    probe: ['measure', 'publish'],
-    decision: ['writeup', 'publish'],
-    chore: ['plan', 'build', 'publish'],
-};
-
-export const STAGE_LABELS: Record<string, string> = {
-    plan: 'Plan',
-    build: 'Build',
-    measure: 'Measure',
-    publish: 'Publish',
-    writeup: 'Writeup',
-};
-
-// The command that works on each stage.
-export const STAGE_COMMANDS: Record<string, string> = {
-    plan: '/wf-plan',
-    build: '/wf-build',
-    measure: '/wf-measure',
-    publish: '/wf-publish',
-    writeup: '/wf-writeup',
-};
 
 export const KIND_LABELS: Record<string, string> = {
     milestone: 'Milestone',

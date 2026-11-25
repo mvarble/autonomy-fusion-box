@@ -14,7 +14,9 @@ point of both, so a stage without results cannot be approved.
 
 Run `bin/wf status --expect measure`. If it fails, stop and tell the user what it said.
 
-Read `.agents/reference/authoring.md` once per session. For a milestone, read the entry's
+Read `.agents/reference/mesearch/workflow.md`, `.agents/reference/mesearch/authoring.md`,
+`markup.md` beside it, and `.agents/reference/authoring.md` once per session. For a milestone,
+read the entry's
 `plan.md`, above all its "What it must measure". For a probe, which has no plan, read the ledger
 rows it sets out to close, their "How we close it", and the sources they cite; a warm-up probe may
 close none.
