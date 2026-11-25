@@ -17,30 +17,29 @@ taken to be the parent of the working directory.
 
 ## Layout
 
-| Path                                     | What it is                                                                                                                   |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `content/landing.md`                     | The prose on the home page.                                                                                                  |
-| `content/<track>/<slug>/index.{md,svx}`  | A page: what the box _is_. The folder is its track (`start`, `system`, `reference`), and `order` places it within the track. |
-| `content/math/<slug>/index.{md,svx}`     | A note of mathematics, one idea to a note.                                                                                   |
-| `content/archive/<slug>/index.md`        | An archive entry: one piece of development, opened by `bin/wf start`.                                                        |
-| `content/archive/<slug>/<name>.{md,svx}` | Its documents: `plan`, `measure` (a milestone or a probe), `writeup` (a decision). Frozen once approved.                     |
-| `content/archive/<slug>/workflow.json`   | Its stage record, written by `bin/wf` alone and shown as the entry's history.                                                |
-| `content/**/*.bib`                       | Bibliography entries, for `[](cite:key)`.                                                                                    |
-| `src/lib/site.ts`                        | Site name, repo URL, the tracks, and the names of an entry's documents. The navigation comes from here.                      |
-| `src/styles/`                            | CSS, split as `tokens/{colors,dimensions,typography}.css` + element and utility sheets. Colors exist only as tokens.         |
-| `src/lib/server/open.ts`                 | The entries in progress and their `[!TODO]`s, which the home page lists under "On the table".                                |
-| `plugins/`                               | The site's own Markdown plugins: callouts, quoted source, heading anchors.                                                   |
-| `katex.config.ts`                        | Site-wide KaTeX macros.                                                                                                      |
+| Path                                     | What it is                                                                                                                                                                                                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `content/landing.md`                     | The prose on the home page.                                                                                                                                                                                                                                              |
+| `content/<track>/<slug>/index.{md,svx}`  | A page: what the box _is_. The folder is its track (`start`, `system`, `reference`), and `order` places it within the track.                                                                                                                                             |
+| `content/math/<slug>/index.{md,svx}`     | A note of mathematics, one idea to a note.                                                                                                                                                                                                                               |
+| `content/archive/<slug>/index.md`        | An archive entry: one piece of development, opened by `bin/wf start`.                                                                                                                                                                                                    |
+| `content/archive/<slug>/<name>.{md,svx}` | Its documents: `plan`, `measure` (a milestone or a probe), `writeup` (a decision). Frozen once approved.                                                                                                                                                                 |
+| `content/archive/<slug>/workflow.json`   | Its stage record, written by `bin/wf` alone and shown as the entry's history.                                                                                                                                                                                            |
+| `content/**/*.bib`                       | Bibliography entries, for `[](cite:key)`.                                                                                                                                                                                                                                |
+| `src/lib/site.ts`                        | Site name, repo URL, the tracks, the names of an entry's documents, and the archive's and `llms.txt`'s paragraphs. The shared pages read it as `$site`.                                                                                                                  |
+| `src/styles/`                            | `tokens/colors.css` (colours exist only as tokens) and the site's own rules (`site.css`), over the shared stylesheet.                                                                                                                                                    |
+| managed files                            | Written by `pnpm exec mesearch-wf sync` and listed in `../.workflow/managed.json`: the routes the package ships, `src/params/`, and what documents import by `$lib` path (`Statement`, `Proof`, `ModelGraph`, `ImageFigure`, `TrackCard`, `graph/spec`). Never edit one. |
+| `katex.config.ts`                        | Site-wide KaTeX macros.                                                                                                                                                                                                                                                  |
 
-The content goes through [`@mvarble/mesearch-cms`](https://github.com/mvarble/mesearch/tree/main/packages/cms)
-with this site's own preset, `sitePreset` in `src/lib/cms/` (adapted from the one in skoro, the
-project this site was adapted from, and tested against the fixture in `test/cms/`): it reads every
-document, resolves links, numbers equations and statements,
+The site is built by [`@mvarble/mesearch-workflow`](https://github.com/mvarble/mesearch/tree/main/packages/workflow),
+which every project documented through the workflow shares: `vite.config.ts` calls its `docsSite()`,
+and its routes, components, styles and content preset are the site's, with the box's own parts
+handed in as `$site`. The content goes through [`@mvarble/mesearch-cms`](https://github.com/mvarble/mesearch/tree/main/packages/cms)
+with that preset: it reads every document, resolves links, numbers equations and statements,
 collects citations, and serves all of it to the routes as `$cms`. A link to a document that does
-not exist, or a `depends_on` that names nothing, is reported when the site builds. KaTeX and the
-scroll box around display math come from
-[`@mvarble/mesearch-markdown`](https://github.com/mvarble/mesearch/tree/main/packages/markdown),
-and the map on the Mathematics page is `@mvarble/mesearch-ui`'s, in this site's colours.
+not exist, or a `depends_on` that names nothing, is reported when the site builds. The home page
+lists the entries in progress and their `[!TODO]`s under "On the table". A change to a shared page
+or component is made in mesearch, and comes here with the next `sync`.
 
 ## Writing a document
 
@@ -196,7 +195,7 @@ export const normal = defineGraph({
   HTML layer over the SVG rather than inside it, so it needs no `<foreignObject>` and no JavaScript.
 - **Styling:** `arrow` (`end`, `start`, `both`, `none`), `label` / `labelAt`, `muted`, and the
   escape hatches `class` / `style` on nodes and edges. The hues are tokens `--graph-<hue>` in
-  `src/styles/tokens/colors.css`, and the rules are in `src/styles/utils/graph.css`.
+  `src/styles/tokens/colors.css`, and the rules are the shared stylesheet's `utils/graph.css`.
 - A mistake, such as an edge to a missing node or a kind the figure does not define, fails the
   build with the figure's title in the message.
 - In the `.md` exports, the tag is replaced by a list of the figure's nodes and edges with the
