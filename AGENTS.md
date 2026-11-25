@@ -49,7 +49,7 @@ none of that needs a workflow, and none of it should start one.
 
 **The development workflow runs only when the user invokes it**, through the `/wf-*` commands
 (`.agents/skills/wf-*`). Every change to the box's code goes through an entry. The procedure is in
-`.agents/reference/workflow.md`. In short:
+`.agents/reference/mesearch/workflow.md`. In short:
 
 | command                                                  | what it does                                 |
 | -------------------------------------------------------- | -------------------------------------------- |
@@ -72,8 +72,22 @@ Rules that hold whether or not a command was invoked:
   the stage does not allow. Do not work around a refusal; it is telling you which command the
   user would need to give.
 - When work at one stage shows an earlier stage wrong, stop and say so; the user may reopen it.
-- Not gated: the workflow's tool (`bin/wf`, `tools/wf/`), the skills, CI, the site's own code
-  (`site/src/`), and the ledger. Changes to those are ordinary work.
+- Not gated: the workflow's config and tool (`workflow.config.ts`, `bin/wf`, `.workflow/`), the
+  skills, CI, the site's own code (`site/src/`), and the ledger. Changes to those are ordinary
+  work, but for the managed files below.
+
+## Managed files
+
+The workflow's engine, its shared skills and documents, and most of the companion site are
+[`@mvarble/mesearch-workflow`](https://github.com/mvarble/mesearch/tree/main/packages/workflow)'s,
+shared with the other projects documented this way. `cd site && pnpm exec mesearch-wf sync` writes
+them, and `.workflow/managed.json` lists them: `bin/wf` and `.workflow/engine/`, the `wf-*` skills
+but `wf-measure`, `.agents/reference/mesearch/`, and the site's shared routes and components.
+`bin/wf guard` refuses an edit to one, and `bin/wf check` fails when one has changed. A change to
+one is made in mesearch, published, and brought here by `sync` after updating the package in
+`site/`. What the box does differently lives here: `workflow.config.ts` (its kinds, stages, code
+and ledger), `.agents/reference/authoring.md`, `.agents/reference/stages/<stage>.md`,
+`wf-measure`, and the site's own pages and components.
 
 ## Layout
 
@@ -81,10 +95,12 @@ Rules that hold whether or not a command was invoked:
 | --------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `site/`               | the companion site; `site/README.md` says how it works                                                      |
 | `site/content/`       | pages, math notes, the ledger, and the archive of entries                                                   |
-| `bin/wf`, `tools/wf/` | the workflow's command line and its tests                                                                   |
+| `workflow.config.ts`  | the workflow's kinds, stages, code and ledger                                                               |
+| `bin/wf`, `.workflow/engine/` | the workflow's command line, managed                                                                |
 | `.workflow/active`    | the entry this branch works on, written by `bin/wf` alone                                                   |
 | `.agents/skills/`     | the skills (linked into `.claude/skills/` for Claude Code)                                                  |
-| `.agents/reference/`  | `workflow.md` (the procedure), `authoring.md` (how to write), `learner.md` (the user's hardware experience) |
+| `.agents/reference/mesearch/` | managed: `workflow.md` (the procedure), `authoring.md` and `markup.md` (how to write)               |
+| `.agents/reference/`  | `authoring.md` (the box's own writing), `stages/` (what each stage asks of the box), `learner.md` (the user's hardware experience) |
 
 The box's own directories, decided in the `foundations` entry and created in M0, sit flat at the top
 level: `firmware/` (the Pico), `ros2_ws/` (the ROS 2 workspace), `host/` (services that must run
@@ -103,7 +119,7 @@ is one, says why.
 ```sh
 bin/wf check
 node --test 'tools/*/*.test.ts' && site/node_modules/.bin/tsc -p tools
-cd site && pnpm check && pnpm lint && pnpm test && pnpm build
+cd site && pnpm exec mesearch-wf diff && pnpm check && pnpm lint && pnpm test && pnpm build
 ```
 
 CI (`.github/workflows/ci.yml`) runs the same, and `bin/wf check --merge` on pull requests into
