@@ -1,0 +1,40 @@
+/* The box's own rules over the shared stylesheet: its logo's accent stroke, the lockup on the home
+ * page, and the frame of a figure written in a document. */
+
+/* The logo's SVG draws its accent in a fixed green; inlined, it takes the theme's accent. */
+.logo [stroke='#2a6f4d'] {
+    stroke: var(--fg-accent);
+}
+
+/* The lockup is the icon beside the site's name, set as a heading. */
+.hero .logo-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin: 0 auto;
+    line-height: 1;
+    font: var(--font-h1);
+    font-size: clamp(2.25rem, 7vw, 3.5rem);
+    color: var(--fg-1);
+
+    svg {
+        width: 1em;
+    }
+}
+
+/* A photo or other image figure written in a document; code blocks and graphs style their own. */
+.prose figure:not(.code-block, .model-graph, .image-figure) {
+    margin: var(--space-6) 0;
+
+    img {
+        height: auto;
+        margin: 0 auto;
+    }
+
+    figcaption {
+        margin-top: var(--space-3);
+        font: var(--font-small);
+        color: var(--fg-3);
+        text-align: center;
+    }
+}
