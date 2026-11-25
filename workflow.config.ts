@@ -7,7 +7,8 @@ import type { WorkflowConfig } from '@mvarble/mesearch-workflow';
 export default {
     project: 'the box',
     // What counts as the box's code: changed only once an entry reaches `build`. The workflow's
-    // own checks, under `tools/workflow/`, are not part of the box.
+    // own tooling is not part of the box: its checks, under `tools/workflow/`, and `tools/wf/`,
+    // where its engine was before it came from the package.
     code: [
         /^firmware\//,
         /^ros2_ws\//,
@@ -16,7 +17,7 @@ export default {
         /^calib\//,
         /^cad\//,
         /^docker\//,
-        /^tools\/(?!workflow\/)[^/]+\//,
+        /^tools\/(?!workflow\/|wf\/)[^/]+\//,
     ],
     // The ledger of unverified facts records what is known as soon as it is known, at any stage.
     free: ['site/content/reference/open-questions/'],
